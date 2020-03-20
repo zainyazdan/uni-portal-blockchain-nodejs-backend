@@ -144,7 +144,40 @@ studentRouter.route('/:studentId/courses')
 });
 
 
+studentRouter.route('/:studentId/gradebook')
+.get((req,res,next) => {
 
+	var query = "select mt.type_name,m.assesment_no, m.date, m.time, m.total_marks, m.obtained_marks from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no  = ? order by mt.type_name asc, m.assesment_no asc";
+	var params = [ req.body.semester, req.body.course, req.body.section, req.params.studentId];
+
+	var primise = queryHelper.Execute(query,params);	
+	primise.then(function(result){
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+})
+.post((req,res,next) => {
+
+	res.statusCode = 403;
+    res.end('post operation not supported on /:studentId/gradebook');
+
+})
+.put((req,res,next) => {
+
+	res.statusCode = 403;
+    res.end('put operation not supported on /:studentId/gradebook');
+	
+})
+.delete((req,res,next) => {
+
+	res.statusCode = 403;
+    res.end('Delete operation not supported on /:studentId/gradebook');
+});
 
 
 

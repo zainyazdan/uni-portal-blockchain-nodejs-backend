@@ -266,7 +266,7 @@ teacherRouter.route('/:teacherId/course_outline')
 
 
 
-teacherRouter.route('/:teacherId/upload_marks')
+teacherRouter.route('/:teacherId/marks/students')
 .get((req,res,next) => {
 
 	var query = "";
@@ -345,9 +345,7 @@ teacherRouter.route('/:teacherId/upload_marks')
 	});
 
 })
-.put((req,res,next) => {
-
-	
+.put((req,res,next) => {	
 	
 })
 .delete((req,res,next) => {
@@ -357,6 +355,248 @@ teacherRouter.route('/:teacherId/upload_marks')
 });
 
 
+
+// of a specific student  (completed)
+
+teacherRouter.route('/:teacherId/marks/students/:student_id')
+.get((req,res,next) => {
+
+	var query = "select std.reg_no,m.assesment_no, m.total_marks, m.obtained_marks,m.date, m.time from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no = ? and assesment_no = ? and mt.type_name = ?";
+	var params = [ req.body.semester, req.body.course, req.body.section, req.params.student_id, req.body.assesment_no, req.body.marks_type ];
+
+
+	var primise = queryHelper.Execute(query,params);	
+	primise.then(function(result){
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+})
+.post((req,res,next) => {
+	var query = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
+	var params = [req.body.semester, req.body.course, req.body.section];
+	var sec_id;
+
+	var primise = queryHelper.Execute(query, params);	
+	primise.then(function(result){
+
+		if(result.length == 0)
+		{
+			res.send("semester or course or section record not found");
+			return;
+		}
+
+		sec_id = result[0].id;
+
+		var query2 = "insert into marks(assesment_no, total_marks, obtained_marks, date, time, mt_id)values(?,?,?,?,?,(select id from marks_type where type_name = ?))";
+		var params2 = [req.body.assesment_no, req.body.total_marks, req.body.obtained_marks, req.body.date, req.body.time, req.body.marks_type];			
+
+		var primise = queryHelper.Execute(query2, params2);	
+
+		primise.then(function(result){
+
+			var marks_id = result.insertId;
+			console.log("marks_id: "+marks_id);
+
+			var query3 = "INSERT INTO has_marks(std_id, sec_id, mid) VALUES ((select id from student where reg_no  =?),?,?)";
+
+			//console.log("req.body.reg_no [" + 0 + "] : " + req.body.reg_no[0])
+
+			var params3 = [ req.params.student_id , sec_id, marks_id];
+
+		    return queryHelper.Execute(query3, params3);
+
+		}).then(function(result){
+			
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({ status: "Successfully Inserted" }));
+		})
+		.catch(function(result){
+			console.log("ERROR 1: " + result);
+		});
+	})
+	.catch(function(result){
+		console.log("ERROR 2: " + result);
+	});
+
+})
+.put((req,res,next) => {	
+	
+	var query = "select m.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no = ? and assesment_no = ? and mt.type_name = ?";
+	var params = [ req.body.semester, req.body.course, req.body.section, req.params.student_id, req.body.assesment_no, req.body.marks_type ];
+
+
+	var primise = queryHelper.Execute(query,params);	
+	primise.then(function(result){
+
+		console.log("result[0].id : " + result[0].id);
+		var marks_id = result[0].id;
+
+
+		var query2 = "update marks set obtained_marks = ? where id = ?";
+		var params2 = [req.body.new_marks, marks_id];			
+		return queryHelper.Execute(query2,params2);
+
+	})
+	.then(function(result){
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify({ status: "Successfully Updated" }));
+	})
+	.catch(function(result){
+		console.log("ERROR : " + result);
+	});
+
+})
+.delete((req,res,next) => {
+
+	res.statusCode = 403;
+    res.end('Delete operation not supported on /marks/:student_id');
+});
+
+
+
+teacherRouter.route('/:teacherId/test')
+.get((req,res,next) => 
+{
+
+	
+
+})
+.post((req,res,next) => {
+
+	var query = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
+	var params = [req.body.semester, req.body.course, req.body.section];
+	var sec_id;
+
+	var primise = queryHelper.Execute(query, params);	
+	primise.then(function(result){
+
+		//console.log("result length: "+result.length);
+		if(result.length == 0)
+		{
+			res.send("semester or course or section record not found");
+			return;
+		}
+
+		//sec_id = JSON.stringify(result).id;
+
+		sec_id = result[0].id;
+		//console.log("sec_id: " + sec_id);
+
+		//res.send(result);
+		//return;
+
+		//req.body.reg_no[i]
+	
+
+		//for (var i = 0; ; ) 
+		{
+			
+
+			var query2 = "insert into marks(assesment_no, total_marks, obtained_marks, date, time, mt_id)values(?,?,?,?,?,(select id from marks_type where type_name = ?))";
+			var params2 = [req.body.assesment_no, req.body.total_marks, req.body.obtained_marks[0], req.body.date, req.body.time, req.body.marks_type];			
+
+			var primise = queryHelper.Execute(query2, params2);	
+
+			primise.then(function(result){
+
+				var marks_id = result.insertId;
+				console.log("marks_id: "+marks_id);
+
+				var query3 = "INSERT INTO has_marks(std_id, sec_id, mid) VALUES ((select id from student where reg_no  =?),?,?)";
+
+				console.log("req.body.reg_no [" + 0 + "] : " + req.body.reg_no[0])
+
+				var params3 = [ req.body.reg_no[0] , sec_id, marks_id];
+
+			    return queryHelper.Execute(query3, params3);
+
+			}).then(function(result){
+				
+			    res.send("Record # " + 0 + " Inserted\n");	
+			})
+			.catch(function(result){
+				console.log("ERROR 1: " + result);
+			});
+			console.log("\n\n");
+		
+			
+		}
+		//res.end("All records Inserted");
+	})
+
+	.catch(function(result){
+		console.log("ERROR 2: " + result);
+	});
+
+	res.end("All records inserted");
+
+	console.log("All records inserted ");
+
+
+
+
+
+	/*console.log(req.body)
+
+
+	for (var i = 0; i < req.body.reg_no.length; i++) {
+
+		console.log(req.body.reg_no[i] + " ,");
+
+
+	}*/
+
+
+	/*console.log("size : " + req.body.reg_no.length);
+	console.log("req.body.reg_no: ");
+
+	for (var i = 0; i < req.body.reg_no.length; i++) {
+
+		console.log(req.body.reg_no[i] + " ,");
+
+
+	}*/
+
+	/*console.log("Testing");
+
+	console.log(req.body.reg_no);
+
+
+	var query = "insert into test values(?,?)";
+
+	var id = [111,222,333];
+
+
+	var params= [id, req.body.reg_no];
+
+	console.log(params);
+
+
+	var primise = queryHelper.Execute(query,params);	
+	primise.then(function(result){
+	
+		res.send("Inserted");
+
+	    return queryHelper.Execute();
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});*/
+
+})
+.put((req,res,next) => {	
+	
+})
+.delete((req,res,next) => {
+
+});
 
 
 

@@ -1,9 +1,9 @@
 var db = require('./db');
 
 
-module.exports.Execute = (query,params) => 
+module.exports.Execute = async (query,params) => 
 {
-	 return new Promise((resolve, reject) => 
+	 return await new Promise((resolve, reject) => 
 	 {
 		 db.query(query,params, (err, result, fields) => 
 		 {
