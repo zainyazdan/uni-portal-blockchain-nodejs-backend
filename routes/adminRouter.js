@@ -1,15 +1,59 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-
 var db = require('../db');
 var queryHelper = require('../query');
-
-
 var mysql = require('mysql');
-
 const adminRouter = express.Router();
-
 adminRouter.use(bodyParser.json());
+
+
+const { sign } = require("jsonwebtoken");
+const { verifyAdmin } = require("../authentication/auth");
+const { secretKey_Admin } = require("../config");
+const { tokenExpireTime } = require("../config");
+
+
+
+adminRouter.route('/:admin_Id/login')
+.get(verifyAdmin, (req,res,next) => {
+
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    return  res.end(JSON.stringify({status:true, message: "Ho gea !!" }))
+})
+.post( (req, res, next) => {
+
+	
+	var query = "select u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and u.password=?";
+	var params = [req.body.username, req.body.password];
+	
+	var primise = queryHelper.Execute(query, params);	
+
+	primise.then(function(results){
+
+		if(results.length == 0)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
+		}
+
+		const jsontoken = sign({user: 'admin', result :results }, secretKey_Admin ,{expiresIn: tokenExpireTime});
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    return  res.end(JSON.stringify({status:true, message: "Successfully Logged-in",token : jsontoken }))
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+});
+
+
+
+
+
 
 //adminRouter.use(bodyParser.urlencoded({ extended: true }));
 /*var params = 2;
@@ -33,7 +77,7 @@ adminRouter.use(bodyParser.json());
 // 3.	admin / {admin_Id} / students
 
 adminRouter.route('/:admin_Id/students')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from student as s join user as u on u.id=s.uid";
 	var primise = queryHelper.Execute(query);	
@@ -47,7 +91,7 @@ adminRouter.route('/:admin_Id/students')
 		res.send(result);	
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email) values(?,?,?,?,?,?,?)";
 	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email];
 
@@ -68,11 +112,11 @@ adminRouter.route('/:admin_Id/students')
 	});
 
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on admin/admin_id/students');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "DELETE user,student FROM user INNER JOIN student ON student.uid = user.id";
 	var primise = queryHelper.Execute(query1);	
@@ -93,7 +137,7 @@ adminRouter.route('/:admin_Id/students')
 // 4.	admin / {admin_Id} / students / {student_Id}
 
 adminRouter.route('/:admin_Id/students/:student_Id')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from user as u join student as s on s.uid=u.id where s.reg_no = ? ";                 
 
@@ -109,11 +153,11 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 	res.statusCode = 403;
 	res.end('post operation not supported on /courses');
 })
-.put( (req, res, next) => { 
+.put(verifyAdmin,  (req, res, next) => { 
 // update student set reg_no='l1f16bscs0157'where uid=6;
 
 	var query1 = "update student set reg_no = ? where reg_no = ?"; 
@@ -145,7 +189,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 		res.send(result);		
 	});
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "DELETE user,student FROM user INNER JOIN student ON student.uid = user.id where student.reg_no=?";
 
@@ -169,7 +213,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 // 	 5.	admin / {admin_Id} / courses
 
 adminRouter.route('/:admin_Id/courses')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from course";                 
 
@@ -191,7 +235,7 @@ adminRouter.route('/:admin_Id/courses')
 	    res.end(JSON.stringify({ status: "Successfully Deleted" }));
 */
 
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var query = "insert into course(name, credithours,code) values (?,?,?)";                 
 	var params = [req.body.name,req.body.credithours,req.body.code];
@@ -210,11 +254,11 @@ adminRouter.route('/:admin_Id/courses')
 		res.send(result);		
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /courses');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query = "delete from course where id>0";                 
 
@@ -240,7 +284,7 @@ adminRouter.route('/:admin_Id/courses')
 // 	 5.	admin / {admin_Id} / courses
 
 adminRouter.route('/:admin_Id/courses/:courseId')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from course where name = ?"; 
 	var primise = queryHelper.Execute(query,req.params.courseId);	
@@ -262,11 +306,11 @@ adminRouter.route('/:admin_Id/courses/:courseId')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
   	res.statusCode = 403;
     res.end('PUT operation not supported on /courses');
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     var query1 = "update course set name = ?,credithours = ?,code = ? where name = ?"; 
 	var params1 = [req.body.name, req.body.credithours, req.body.code, req.params.courseId];  
@@ -284,7 +328,7 @@ adminRouter.route('/:admin_Id/courses/:courseId')
 	});
     
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query = "delete from course where name = ?";                 
 
@@ -304,7 +348,7 @@ adminRouter.route('/:admin_Id/courses/:courseId')
 
 
 adminRouter.route('/:admin_Id/teachers')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from teacher as t join user as u on u.id=t.uid";                 
 	var primise = queryHelper.Execute(query);	
@@ -317,7 +361,7 @@ adminRouter.route('/:admin_Id/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email) values(?,?,?,?,?,?,?)";
 	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email];
@@ -339,11 +383,11 @@ adminRouter.route('/:admin_Id/teachers')
 	});
  
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /teachers');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "DELETE user,teacher FROM user INNER JOIN teacher ON teacher.uid = user.id";
 
@@ -374,7 +418,7 @@ adminRouter.route('/:admin_Id/teachers')
 */
 
 adminRouter.route('/:admin_Id/teachers/:teacher_Id')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from teacher as t join user as u on u.id=t.uid where t.reg_no=?";                 
 
@@ -389,12 +433,12 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
 	res.end('post operation not supported on /teachers');
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     var query1 = "update teacher set reg_no = ?,qualification = ? where reg_no = ?"; 
 	var params1 = [req.body.reg_no, req.body.qualification, req.params.teacher_Id];
@@ -424,7 +468,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 		res.send(result);		
 	});
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "DELETE user,teacher FROM user INNER JOIN teacher ON teacher.uid = user.id where teacher.reg_no=?";
 
@@ -448,7 +492,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 
 
 adminRouter.route('/:admin_Id/assessment_type')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from marks_type";                 
 
@@ -464,7 +508,7 @@ adminRouter.route('/:admin_Id/assessment_type')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var query = "insert into marks_type(type_name) values(?)";                 
 
@@ -479,11 +523,11 @@ adminRouter.route('/:admin_Id/assessment_type')
 		console.log("ERROR : " + result);
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /sections');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "delete from marks_type where id > 0";                 
 
@@ -507,7 +551,7 @@ adminRouter.route('/:admin_Id/assessment_type')
 
 
 adminRouter.route('/:admin_Id/assessment_type/:type_name')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from marks_type where type_name = ?";                 
 
@@ -523,13 +567,13 @@ adminRouter.route('/:admin_Id/assessment_type/:type_name')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on /sections');
 
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     var query = "update marks_type set type_name = ? where type_name = ?"; 
 	var params = [req.body.type_name, req.params.type_name];
@@ -548,7 +592,7 @@ adminRouter.route('/:admin_Id/assessment_type/:type_name')
 	});
 
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query = "delete from marks_type where type_name = ?";                 
 
@@ -567,7 +611,7 @@ adminRouter.route('/:admin_Id/assessment_type/:type_name')
 
 
 adminRouter.route('/:admin_Id/semester')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from semester";                 
 
@@ -583,7 +627,7 @@ adminRouter.route('/:admin_Id/semester')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var query = "insert into semester(name) values(?)";                 
 
@@ -598,11 +642,11 @@ adminRouter.route('/:admin_Id/semester')
 		console.log("ERROR : " + result);
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /sections');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "delete from semester where id > 0";                 
 
@@ -627,7 +671,7 @@ adminRouter.route('/:admin_Id/semester')
 
 
 adminRouter.route('/:admin_Id/semester/:semesterId')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from semester where name = ?";                 
 
@@ -643,13 +687,13 @@ adminRouter.route('/:admin_Id/semester/:semesterId')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on /sections');
 
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     var query = "update semester set name = ? where name = ?"; 
 	var params = [req.body.name, req.params.semesterId];
@@ -668,7 +712,7 @@ adminRouter.route('/:admin_Id/semester/:semesterId')
 	});
 
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query = "delete from semester where name = ?";                 
 
@@ -688,7 +732,7 @@ adminRouter.route('/:admin_Id/semester/:semesterId')
 
 
 adminRouter.route('/:admin_Id/sections')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select sec.name as section, sem.name as semester, c.name as course, c.credithours, c.code as courseCode from section as sec join semester as sem on sec.sid=sem.id join course as c on c.id = sec.cid";                 
 
@@ -704,7 +748,7 @@ adminRouter.route('/:admin_Id/sections')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 	var sid;
 	var cid;
 
@@ -748,13 +792,13 @@ adminRouter.route('/:admin_Id/sections')
 		console.log("ERROR : " + result);
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     res.statusCode = 403;
     res.end('PUT operation not supported on /sections');
 
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	var query1 = "delete from section where id>0";                 
 
@@ -777,7 +821,7 @@ adminRouter.route('/:admin_Id/sections')
 
 
 adminRouter.route('/:admin_Id/sections/:sectionId')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select sec.name as section, sem.name as semester, c.name as course, c.credithours, c.code as courseCode from section as sec join semester as sem on sec.sid=sem.id join course as c on c.id = sec.cid where sec.name = ?";                 
 
@@ -792,12 +836,12 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('POST operation not supported on /sections/{sectionId}');
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
 	var sid;
 	var cid;
@@ -847,7 +891,7 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 		console.log("ERROR : " + result);
 	});
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     
 	//var query = "DELETE section,course FROM section INNER JOIN course ON course.id = section.cid where course.name = ? and section.name = ?";                 
 	var query = "DELETE FROM section where name = ?";                 
@@ -869,7 +913,7 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 
 
 adminRouter.route('/:admin_Id/assign_section/teachers')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select sem.name as semester,c.name as course,sec.name as section,u.name as Teachername,t.reg_no as reg_no from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join teaches as ts on ts.sid=sec.id join teacher as t on t.id=ts.tid join user as u on u.id = t.uid";
 	var primise = queryHelper.Execute(query);	
@@ -885,7 +929,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 
 	var sec_id;
@@ -941,12 +985,12 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on admin/{admin_Id}/AssignTeacherSection');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     var sec_id;
 	var tid;
 	
@@ -992,7 +1036,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 
 
 adminRouter.route('/:admin_Id/assign_section/teachers/:teacher_Id')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select sem.name as semester,c.name as course,sec.name as section,u.name as Teachername,t.reg_no as reg_no from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join teaches as ts on ts.sid=sec.id join teacher as t on t.id=ts.tid join user as u on u.id = t.uid where t.reg_no=?";
 	var primise = queryHelper.Execute(query, req.params.teacher_Id);	
@@ -1008,18 +1052,18 @@ adminRouter.route('/:admin_Id/assign_section/teachers/:teacher_Id')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('POST operation not supported on /assign_section/teacher/{teacher_Id}');
 
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on admin/{admin_Id}/AssignTeacherSection');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
 
 	var query1 = "select t.id from teacher as t join user as u on t.uid=u.id where t.reg_no = ?";                                
 	var primise = queryHelper.Execute(query1,req.params.teacher_Id);	
@@ -1050,7 +1094,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers/:teacher_Id')
 
 
 adminRouter.route('/:admin_Id/assign_section/students')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select s.reg_no, u.name as name,sem.name as semester,c.name as course,sec.name as section from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join enrolled_in as e on e.sec_id=sec.id join student as s on s.id=e.std_id join user as u on u.id=s.uid";
 	var primise = queryHelper.Execute(query);	
@@ -1065,7 +1109,7 @@ adminRouter.route('/:admin_Id/assign_section/students')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var sec_id;
 	var std_id;
@@ -1120,12 +1164,12 @@ adminRouter.route('/:admin_Id/assign_section/students')
 		console.log("ERROR : " + result);
 	});
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on admin/{admin_Id}/assign_section/students');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
     var sec_id;
 	var std_id;
 	
@@ -1172,7 +1216,7 @@ adminRouter.route('/:admin_Id/assign_section/students')
 
 
 adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
-.get((req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	
 	var query = "select s.reg_no, u.name as name,sem.name as semester,c.name as course,sec.name as section from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join enrolled_in as e on e.sec_id=sec.id join student as s on s.id=e.std_id join user as u on u.id=s.uid where s.reg_no=?";
@@ -1189,18 +1233,18 @@ adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
 	});
 
 })
-.post((req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('POST operation not supported on /assign_section/students/{student_Id}');
 
 })
-.put( (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on admin/{admin_Id}/AssignTeacherSection');
 })
-.delete((req, res, next) => {
+.delete(verifyAdmin, (req, res, next) => {
 
  
 	var query1 = "select s.id from student as s join user as u on s.uid=u.id where s.reg_no = ?";                 
@@ -1233,6 +1277,8 @@ adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
 	});
 
 });
+
+
 
 
 module.exports = adminRouter;

@@ -3,13 +3,66 @@ const bodyParser = require('body-parser');
 var db = require('../db');
 var mysql = require('mysql');
 var queryHelper = require('../query');
-
 const teacherRouter = express.Router();
 teacherRouter.use(bodyParser.json());
 
 
+const { sign } = require("jsonwebtoken")
+const { verifyTeacher } = require("../authentication/auth")
+const { secretKey_Teacher } = require("../config")
+const { tokenExpireTime } = require("../config")
+
+
+
+
+teacherRouter.route('/:teacher_Id/login')
+.get(verifyTeacher, (req,res,next) => {		// For testing pupposes
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    return  res.end(JSON.stringify({status:true, message: "Ho gea teacher!!" }))
+})
+.post((req, res, next) => {
+
+	var query = "select u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ?and u.password=?";
+	var params = [req.body.username, req.body.password];
+	
+
+	var primise = queryHelper.Execute(query, params);	
+
+	primise.then(function(results){
+
+		if(results.length == 0)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
+		}
+
+		const jsontoken = sign({user: 'teacher', result :results }, secretKey_Teacher ,{expiresIn: tokenExpireTime});
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    return  res.end(JSON.stringify({status:true, meassage: "Successfully Logged-in",token : jsontoken }))
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+});
+
+
+
+
+
+
+
+
+
+
+
+
 teacherRouter.route('/:teacherId/personal_info')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "select * from teacher as t join user as u on t.uid = u.id where t.reg_no = ? ";
 	var primise = queryHelper.Execute(query,req.params.teacherId);	
@@ -29,7 +82,7 @@ teacherRouter.route('/:teacherId/personal_info')
 
 
 teacherRouter.route('/:teacherId/announcements')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "select a.announcement, a.date, a.time from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join announcements as a on a.sec_id=sec.id where t.reg_no = ? and sem.name=? and c.name = ? and sec.name = ?";
 	var params = [ req.params.teacherId ,req.body.semester ,req.body.course ,req.body.section];
@@ -47,7 +100,7 @@ teacherRouter.route('/:teacherId/announcements')
 	});
 
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	var query1 = "select sec.id from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name=? and c.name = ? and sec.name = ?";
 	var params1 = [ req.params.teacherId ,req.body.semester ,req.body.course ,req.body.section ];
@@ -79,12 +132,12 @@ teacherRouter.route('/:teacherId/announcements')
 	});
 
 })
-.put((req,res,next) => {
+.put(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on /announcements');
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('Delete operation not supported on /announcements');
@@ -92,7 +145,7 @@ teacherRouter.route('/:teacherId/announcements')
 
 
 teacherRouter.route('/:teacherId/courses')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name= ?;";
 	var params = [ req.params.teacherId ,req.body.semester];
@@ -108,18 +161,18 @@ teacherRouter.route('/:teacherId/courses')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('POST operation not supported on /courses');
 
 })
-.put((req,res,next) => {
+.put(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('PUT operation not supported on /courses');
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('Delete operation not supported on /courses');
@@ -128,7 +181,7 @@ teacherRouter.route('/:teacherId/courses')
 
 
 teacherRouter.route('/:teacherId/course_outline')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "select mt.type_name as Type,co.weightage,co.no_of_selected from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join course_outline as co on co.sec_id=sec.id join marks_type as mt on mt.id=co.mt_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name = ? and c.name = ? and sec.name = ?";
 	var params = [ req.params.teacherId ,req.body.semester, req.body.course, req.body.section ];
@@ -145,7 +198,7 @@ teacherRouter.route('/:teacherId/course_outline')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	var sec_id;
 	var mt_id;
@@ -203,7 +256,7 @@ teacherRouter.route('/:teacherId/course_outline')
 	});
 
 })
-.put((req,res,next) => {
+.put(verifyTeacher, (req,res,next) => {
 
 	var sec_id;
 	var mt_id;
@@ -253,7 +306,7 @@ teacherRouter.route('/:teacherId/course_outline')
 	});
 	
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('Delete operation not supported on /course_outline');
@@ -267,7 +320,7 @@ teacherRouter.route('/:teacherId/course_outline')
 
 
 teacherRouter.route('/:teacherId/marks/students')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "";
 	var params = [ req.params.teacherId ,req.body.semester, req.body.course, req.body.section ];
@@ -284,7 +337,7 @@ teacherRouter.route('/:teacherId/marks/students')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	var std_id;
 	var sec_id;
@@ -345,10 +398,10 @@ teacherRouter.route('/:teacherId/marks/students')
 	});
 
 })
-.put((req,res,next) => {	
+.put(verifyTeacher, (req,res,next) => {	
 	
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('Delete operation not supported on /course_outline');
@@ -359,7 +412,7 @@ teacherRouter.route('/:teacherId/marks/students')
 // of a specific student  (completed)
 
 teacherRouter.route('/:teacherId/marks/students/:student_id')
-.get((req,res,next) => {
+.get(verifyTeacher, (req,res,next) => {
 
 	var query = "select std.reg_no,m.assesment_no, m.total_marks, m.obtained_marks,m.date, m.time from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no = ? and assesment_no = ? and mt.type_name = ?";
 	var params = [ req.body.semester, req.body.course, req.body.section, req.params.student_id, req.body.assesment_no, req.body.marks_type ];
@@ -376,7 +429,7 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 		console.log("ERROR : " + result);
 	});
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 	var query = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
 	var params = [req.body.semester, req.body.course, req.body.section];
 	var sec_id;
@@ -425,7 +478,7 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 	});
 
 })
-.put((req,res,next) => {	
+.put(verifyTeacher, (req,res,next) => {	
 	
 	var query = "select m.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no = ? and assesment_no = ? and mt.type_name = ?";
 	var params = [ req.body.semester, req.body.course, req.body.section, req.params.student_id, req.body.assesment_no, req.body.marks_type ];
@@ -453,7 +506,7 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 	});
 
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 	res.statusCode = 403;
     res.end('Delete operation not supported on /marks/:student_id');
@@ -462,13 +515,13 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 
 
 teacherRouter.route('/:teacherId/test')
-.get((req,res,next) => 
+.get(verifyTeacher, (req,res,next) => 
 {
 
 	
 
 })
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	var query = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
 	var params = [req.body.semester, req.body.course, req.body.section];
@@ -591,10 +644,10 @@ teacherRouter.route('/:teacherId/test')
 	});*/
 
 })
-.put((req,res,next) => {	
+.put(verifyTeacher, (req,res,next) => {	
 	
 })
-.delete((req,res,next) => {
+.delete(verifyTeacher, (req,res,next) => {
 
 });
 
