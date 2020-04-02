@@ -319,7 +319,7 @@ teacherRouter.route('/:teacherId/course_outline')
 
 
 
-teacherRouter.route('/:teacherId/marks/students')
+teacherRouter.route('/:teacherId/marks/studentssad ')
 .get(verifyTeacher, (req,res,next) => {
 
 	var query = "";
@@ -478,7 +478,7 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 	});
 
 })
-.put(verifyTeacher, (req,res,next) => {	
+.put( verifyTeacher, (req,res,next) => {	
 	
 	var query = "select m.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no = ? and assesment_no = ? and mt.type_name = ?";
 	var params = [ req.body.semester, req.body.course, req.body.section, req.params.student_id, req.body.assesment_no, req.body.marks_type ];
@@ -487,19 +487,19 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
 
-		console.log("result[0].id : " + result[0].id);
+		// console.log("result[0].id : " + result[0].id);
 		var marks_id = result[0].id;
 
+		var query2 = "update marks set obtained_marks = ?, date = ?, time = ? where id = ?";
 
-		var query2 = "update marks set obtained_marks = ? where id = ?";
-		var params2 = [req.body.new_marks, marks_id];			
+		var params2 = [req.body.new_marks,req.body.new_date, req.body.new_time, marks_id];			
 		return queryHelper.Execute(query2,params2);
 
 	})
 	.then(function(result){
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
-	    res.end(JSON.stringify({ status: "Successfully Updated" }));
+	    res.end(JSON.stringify({ status:true, message:  "Successfully Updated" }));
 	})
 	.catch(function(result){
 		console.log("ERROR : " + result);
@@ -514,9 +514,8 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 
 
 
-teacherRouter.route('/:teacherId/test')
-// .get(verifyTeacher, (req,res,next) => 
-.get((req,res,next) => 
+teacherRouter.route('/:teacherId/upload_marks/students')
+.get(verifyTeacher, (req,res,next) => 
 {
 	var query = "select  s.reg_no, u.name, m.date, m.time, m.total_marks, m.obtained_marks	from student as s join has_marks as hm on s.id = hm.std_id	join section as sec on sec.id=hm.sec_id join user as u on s.uid=u.id	join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid	join marks as m on m.id=hm.mid	join marks_type as mt on mt.id = m.mt_id	where sec.name = ? and c.name = ?	and sem.name = ? and assesment_no = ? 	and mt.type_name = ? "; 
 	var params = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
@@ -533,7 +532,7 @@ teacherRouter.route('/:teacherId/test')
 	});
 })
 //.post(verifyTeacher, (req,res,next) => {
-.post((req,res,next) => {
+.post(verifyTeacher, (req,res,next) => {
 
 	if( (req.body.reg_no.length) != (req.body.obtained_marks.length) )
 	{
@@ -586,19 +585,19 @@ teacherRouter.route('/:teacherId/test')
 		// example
 		//var query3 = 'insert into test(sid, marks) values (?,?)';
 		//var params = [ [1,2],[3,4],[5,6] ];
-
-
 		//console.log("req.body.obtained_marks : " + req.body.obtained_marks.length );
+
 
 		var promiseArray = [];
 
 		for (let i = 0; i < req.body.obtained_marks.length ; i++) 
 		{	
-			console.log("Chala : "+ i);
+			//console.log("Chala : "+ i);
 			var params3 = [req.body.assesment_no, req.body.total_marks, req.body.obtained_marks[i], req.body.date, req.body.time, marks_type_id];			
 
-			promiseArray[i] = queryHelper.Execute(query3, params3);	
+			promiseArray[i] = queryHelper.Execute(query3, params3);
 		}
+
 
 
 		var marks_id = [];
@@ -617,8 +616,6 @@ teacherRouter.route('/:teacherId/test')
 			//res.end(JSON(result));
 
 
-
-
 				var query4 = "insert into has_marks(std_id, sec_id, mid) values((select id from student where reg_no = ?) , ? ,? )";
 				for (let i = 0; i < req.body. reg_no.length; i++) {
 					
@@ -628,10 +625,10 @@ teacherRouter.route('/:teacherId/test')
 				}
 
 				Promise.all(promiseArray).then((result)=>{
-
-					//console.log("Promise.all 2 [ "+i+" ] : "+result[i].insertId);
-					res.end(JSON.stringify(result));
-
+	
+					res.statusCode = 200;
+					res.setHeader('Content-Type', 'application/json');   
+					res.end(JSON.stringify({ status: true, message: "Successfully Inserted" }));
 				})
 				.catch((err)=>{
 					console.log("ERROR: " + err);
@@ -640,17 +637,9 @@ teacherRouter.route('/:teacherId/test')
 				
 
 		})
-		.then((result)=>{
-
-
-		})
 		.catch((err)=>{
 			console.log("ERROR: " + err);
 		});// promise.all catch()
-
-
-
-
 	})
 	.catch(function(err){
 		console.log("ERROR marks type : " + err);
@@ -659,44 +648,55 @@ teacherRouter.route('/:teacherId/test')
 // .put(verifyTeacher, (req,res,next) => {	
 .put( (req,res,next) => {	
 
-	var query = "select m.* from student as s join has_marks as hm on s.id = hm.std_id 	join section as sec on sec.id=hm.sec_id 	join user as u on s.uid=u.id 	join course as c on c.id = sec.cid 	join semester as sem on sem.id = sec.sid 	join marks as m on m.id=hm.mid 	join marks_type as mt on mt.id = m.mt_id 	where sec.name = ? and s.reg_no= ? and c.name = ?  	and sem.name = ? and assesment_no = ? and total_marks = ? 	and obtained_marks = ? and mt.type_name = ?"; 
-
-	 
-
+	var query = "select m.id from student as s join has_marks as hm on s.id = hm.std_id 	join section as sec on sec.id=hm.sec_id 	join user as u on s.uid=u.id 	join course as c on c.id = sec.cid 	join semester as sem on sem.id = sec.sid 	join marks as m on m.id=hm.mid 	join marks_type as mt on mt.id = m.mt_id where sec.name = ? and s.reg_no = ? and c.name = ? and sem.name = ? and assesment_no = ? and total_marks = ? and mt.type_name = ?";
 
 	var promises = [];
+
 	for (let i = 0; i < req.body.reg_no.length; i++) {
 		// console.log("i = " + i );
-		var params = [req.body.section, req.body.reg_no[i],req.body.course, req.body.semester, req.body.assesment_no, req.body.total_marks, req.body.old_marks[i], req.body.marks_type ];
+		var params = [req.body.section, req.body.reg_no[i], req.body.course, req.body.semester, req.body.assesment_no, req.body.total_marks, req.body.marks_type ];
 
-		promises[i] = queryHelper.Execute(query,params);		
+		promises[i] = queryHelper.Execute(query, params);		
 	}
 
+	var marks_id = [];
+
 	Promise.all(promises).then((result)=>{
-		for (let i = 0; i < result.length; i++) {
-			console.log("id[ "+i+" ] : "+result[i].id);
+
+		for (let i = 0; i < result.length; i++) 
+		{
+			//console.log("id[ " + i + " ] : "+ result[i][0].id);
+			marks_id[i] = result[i][0].id;
 		}
+
+		var query2 = "update marks set obtained_marks = ?, date = ?, time = ? where id = ?";
+		var promises2 = [];
+
+		for (let i = 0; i < marks_id.length; i++) {
+
+			var params2 = [ req.body.new_marks[i], req.body.new_date, req.body.new_time ,marks_id[i]];
+			
+			promises2[i] = queryHelper.Execute(query2, params2);	
+		}
+		
+		Promise.all(promises2).then(()=>{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Successfully Updated" }));
+		})
+		.catch(()=>{
+			console.log("Error : " + err);
+		});
+
 	})
 	.catch((err)=>{
 		console.log("Error 11 : " + err);
 	})
 	
-
-	// primise.then(function(result){
-
-	// 	res.statusCode = 200;
-	// 	res.setHeader('Content-Type', 'application/json');   
-	//     res.end(JSON.stringify(result));
-
-	// }).catch(function(result){
-	// 	console.log("ERROR : " + result);
-	// });
-
-	
-	
 })
 .delete(verifyTeacher, (req,res,next) => {
-
+	res.statusCode = 403;
+    res.end('Delete operation not supported');
 });
 
 
