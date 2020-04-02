@@ -515,19 +515,38 @@ teacherRouter.route('/:teacherId/marks/students/:student_id')
 
 
 teacherRouter.route('/:teacherId/test')
-.get(verifyTeacher, (req,res,next) => 
+// .get(verifyTeacher, (req,res,next) => 
+.get((req,res,next) => 
 {
+	var query = "select  s.reg_no, u.name, m.date, m.time, m.total_marks, m.obtained_marks	from student as s join has_marks as hm on s.id = hm.std_id	join section as sec on sec.id=hm.sec_id join user as u on s.uid=u.id	join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid	join marks as m on m.id=hm.mid	join marks_type as mt on mt.id = m.mt_id	where sec.name = ? and c.name = ?	and sem.name = ? and assesment_no = ? 	and mt.type_name = ? "; 
+	var params = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
 
-	
+	var primise = queryHelper.Execute(query,params);	
+	primise.then(function(result){
 
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
 })
-.post(verifyTeacher, (req,res,next) => {
+//.post(verifyTeacher, (req,res,next) => {
+.post((req,res,next) => {
 
-	var query = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
-	var params = [req.body.semester, req.body.course, req.body.section];
+	if( (req.body.reg_no.length) != (req.body.obtained_marks.length) )
+	{
+		res.end("error : length of obtained marks and reg_no is not same !!");
+		return;
+	}
+
+	var query1 = "select sec.id from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where sem.name= ? and c.name = ? and sec.name = ?";
+	var params1 = [req.body.semester, req.body.course, req.body.section];
 	var sec_id;
+	var marks_type_id;
 
-	var primise = queryHelper.Execute(query, params);	
+	var primise = queryHelper.Execute(query1, params1);	
 	primise.then(function(result){
 
 		//console.log("result length: "+result.length);
@@ -537,114 +556,143 @@ teacherRouter.route('/:teacherId/test')
 			return;
 		}
 
-		//sec_id = JSON.stringify(result).id;
-
 		sec_id = result[0].id;
-		//console.log("sec_id: " + sec_id);
+		console.log("section id : " + sec_id );
+		
 
-		//res.send(result);
+		var query2 = "select id from marks_type where type_name = ?";
+		var params2 = [ req.body.marks_type ];
+
+
+		return queryHelper.Execute(query2 ,params2);	
+	})
+	.then((result)=>{
+		
+		if(result.length == 0)
+		{
+			res.send("Marks Type record not found");
+			return;
+		}
+
+		marks_type_id = result[0].id;
+
+		console.log("Marks Type id : " + marks_type_id );
+
 		//return;
 
-		//req.body.reg_no[i]
-	
+		var query3 = "insert into marks(assesment_no, total_marks, obtained_marks, date, time, mt_id)values (?,?,?,?,?,?)";
 
-		//for (var i = 0; ; ) 
-		{
-			
 
-			var query2 = "insert into marks(assesment_no, total_marks, obtained_marks, date, time, mt_id)values(?,?,?,?,?,(select id from marks_type where type_name = ?))";
-			var params2 = [req.body.assesment_no, req.body.total_marks, req.body.obtained_marks[0], req.body.date, req.body.time, req.body.marks_type];			
+		// example
+		//var query3 = 'insert into test(sid, marks) values (?,?)';
+		//var params = [ [1,2],[3,4],[5,6] ];
 
-			var primise = queryHelper.Execute(query2, params2);	
 
-			primise.then(function(result){
+		//console.log("req.body.obtained_marks : " + req.body.obtained_marks.length );
 
-				var marks_id = result.insertId;
-				console.log("marks_id: "+marks_id);
+		var promiseArray = [];
 
-				var query3 = "INSERT INTO has_marks(std_id, sec_id, mid) VALUES ((select id from student where reg_no  =?),?,?)";
+		for (let i = 0; i < req.body.obtained_marks.length ; i++) 
+		{	
+			console.log("Chala : "+ i);
+			var params3 = [req.body.assesment_no, req.body.total_marks, req.body.obtained_marks[i], req.body.date, req.body.time, marks_type_id];			
 
-				console.log("req.body.reg_no [" + 0 + "] : " + req.body.reg_no[0])
-
-				var params3 = [ req.body.reg_no[0] , sec_id, marks_id];
-
-			    return queryHelper.Execute(query3, params3);
-
-			}).then(function(result){
-				
-			    res.send("Record # " + 0 + " Inserted\n");	
-			})
-			.catch(function(result){
-				console.log("ERROR 1: " + result);
-			});
-			console.log("\n\n");
-		
-			
+			promiseArray[i] = queryHelper.Execute(query3, params3);	
 		}
-		//res.end("All records Inserted");
+
+
+		var marks_id = [];
+		Promise.all(promiseArray).then((result)=>{
+
+			for (let i = 0; i < result.length; i++) {
+
+				console.log("Promise.all 1 [ "+i+" ] : "+result[i].insertId);
+				marks_id[i] = result[i].insertId;	
+			}
+			
+			console.log("Array :\n");
+			for (let i = 0; i < marks_id.length; i++) {
+				console.log("marks_id: [ "+i+" ] = "+ marks_id[i]);
+			}
+			//res.end(JSON(result));
+
+
+
+
+				var query4 = "insert into has_marks(std_id, sec_id, mid) values((select id from student where reg_no = ?) , ? ,? )";
+				for (let i = 0; i < req.body. reg_no.length; i++) {
+					
+					var params4 = [req.body.reg_no[i], sec_id, marks_id[i]];			
+					
+					promiseArray[i] = queryHelper.Execute(query4, params4);		
+				}
+
+				Promise.all(promiseArray).then((result)=>{
+
+					//console.log("Promise.all 2 [ "+i+" ] : "+result[i].insertId);
+					res.end(JSON.stringify(result));
+
+				})
+				.catch((err)=>{
+					console.log("ERROR: " + err);
+
+				});
+				
+
+		})
+		.then((result)=>{
+
+
+		})
+		.catch((err)=>{
+			console.log("ERROR: " + err);
+		});// promise.all catch()
+
+
+
+
 	})
-
-	.catch(function(result){
-		console.log("ERROR 2: " + result);
+	.catch(function(err){
+		console.log("ERROR marks type : " + err);
 	});
-
-	res.end("All records inserted");
-
-	console.log("All records inserted ");
-
-
-
-
-
-	/*console.log(req.body)
-
-
-	for (var i = 0; i < req.body.reg_no.length; i++) {
-
-		console.log(req.body.reg_no[i] + " ,");
-
-
-	}*/
-
-
-	/*console.log("size : " + req.body.reg_no.length);
-	console.log("req.body.reg_no: ");
-
-	for (var i = 0; i < req.body.reg_no.length; i++) {
-
-		console.log(req.body.reg_no[i] + " ,");
-
-
-	}*/
-
-	/*console.log("Testing");
-
-	console.log(req.body.reg_no);
-
-
-	var query = "insert into test values(?,?)";
-
-	var id = [111,222,333];
-
-
-	var params= [id, req.body.reg_no];
-
-	console.log(params);
-
-
-	var primise = queryHelper.Execute(query,params);	
-	primise.then(function(result){
-	
-		res.send("Inserted");
-
-	    return queryHelper.Execute();
-
-	}).catch(function(result){
-		console.log("ERROR : " + result);
-	});*/
-
 })
-.put(verifyTeacher, (req,res,next) => {	
+// .put(verifyTeacher, (req,res,next) => {	
+.put( (req,res,next) => {	
+
+	var query = "select m.* from student as s join has_marks as hm on s.id = hm.std_id 	join section as sec on sec.id=hm.sec_id 	join user as u on s.uid=u.id 	join course as c on c.id = sec.cid 	join semester as sem on sem.id = sec.sid 	join marks as m on m.id=hm.mid 	join marks_type as mt on mt.id = m.mt_id 	where sec.name = ? and s.reg_no= ? and c.name = ?  	and sem.name = ? and assesment_no = ? and total_marks = ? 	and obtained_marks = ? and mt.type_name = ?"; 
+
+	 
+
+
+	var promises = [];
+	for (let i = 0; i < req.body.reg_no.length; i++) {
+		// console.log("i = " + i );
+		var params = [req.body.section, req.body.reg_no[i],req.body.course, req.body.semester, req.body.assesment_no, req.body.total_marks, req.body.old_marks[i], req.body.marks_type ];
+
+		promises[i] = queryHelper.Execute(query,params);		
+	}
+
+	Promise.all(promises).then((result)=>{
+		for (let i = 0; i < result.length; i++) {
+			console.log("id[ "+i+" ] : "+result[i].id);
+		}
+	})
+	.catch((err)=>{
+		console.log("Error 11 : " + err);
+	})
+	
+
+	// primise.then(function(result){
+
+	// 	res.statusCode = 200;
+	// 	res.setHeader('Content-Type', 'application/json');   
+	//     res.end(JSON.stringify(result));
+
+	// }).catch(function(result){
+	// 	console.log("ERROR : " + result);
+	// });
+
+	
 	
 })
 .delete(verifyTeacher, (req,res,next) => {

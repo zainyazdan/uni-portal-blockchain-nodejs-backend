@@ -16,3 +16,22 @@ module.exports.Execute = async (query,params) =>
 };
 
 
+module.exports.Execute2 = async (promise ,query,params, i) => 
+{
+	//console.log("promise resolved aya");
+	promise = await new Promise((resolve, reject) => 
+	 {
+		 db.query(query,params, (err, result, fields) => 
+		 {
+		      if (err) 
+		      	reject(err); 
+		      else
+				  {
+					  console.log("promise resolved: "+i );
+					  resolve(result);
+				  }
+
+		  })
+	  });
+};
+
