@@ -6,7 +6,8 @@ var fs = require('fs');
 router.get('/', function(req, res, next) {
 
   res.sendFile(__dirname+'/Home_Page.html');
-
+  return;
+  console.log("AAYA");
 });
 
 
