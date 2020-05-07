@@ -225,5 +225,67 @@ studentRouter.route('/:studentId/gradebook')
 
 
 
+studentRouter.route('/:studentId/test')
+.get( (req,res,next) => {
+
+	var query = "select * from student as s join user as u on s.uid = u.id where s.reg_no = ? ";
+	var primise = queryHelper.Execute(query,req.params.studentId);	
+	primise.then(function(result){
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');
+	    res.end(JSON.stringify(result));
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+		res.send(result);	
+	});
+})
+.post( (req, res, next) => {
+    res.statusCode = 200;
+	//res.send(result);	
+	console.log("username: " + req.body.username);
+	console.log("password : " + JSON.stringify(req.body));
+
+
+    res.end('POST operation not supported on /:studentId/personal_info');
+})
+.put(verifyStudent,  (req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /:studentId/personal_info');
+})
+.delete(verifyStudent, (req, res, next) => {
+    res.statusCode = 403;
+    res.end('DELETE operation not supported on /:studentId/personal_info');
+});
+
+
+studentRouter.route('/:test')
+.get((req,res,next) => {
+
+	var query = "select * from student as s join user as u on s.uid = u.id";
+	var primise = queryHelper.Execute(query);	
+	primise.then(function(result){
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');
+	    res.end(JSON.stringify(result));
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+		res.send(result);	
+	});
+})
+.post(verifyStudent, (req, res, next) => {
+   res.statusCode = 403;
+    res.end('POST operation not supported on /:studentId/personal_info');
+})
+.put(verifyStudent,  (req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /:studentId/personal_info');
+})
+.delete(verifyStudent, (req, res, next) => {
+    res.statusCode = 403;
+    res.end('DELETE operation not supported on /:studentId/personal_info');
+});
+
 
 module.exports = studentRouter;

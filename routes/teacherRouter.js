@@ -687,7 +687,6 @@ teacherRouter.route('/:teacherId/upload_marks/students')
 		.catch(()=>{
 			console.log("Error : " + err);
 		});
-
 	})
 	.catch((err)=>{
 		console.log("Error 11 : " + err);

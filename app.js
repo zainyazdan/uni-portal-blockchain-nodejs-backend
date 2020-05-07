@@ -29,33 +29,20 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// function auth (req, res, next) {
-//   console.log(req.headers);
-//   var authHeader = req.headers.authorization;
-//   if (!authHeader) {
-//       var err = new Error('You are not authenticated!');
-//       res.setHeader('WWW-Authenticate', 'Basic');
-//       err.status = 401;
-//       next(err);
-//       return;
-//   }
 
-//   var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-//   var user = auth[0];
-//   var pass = auth[1];
-//   if (user == 'admin' && pass == 'password') {
-//       next(); // authorized
-//   } else {
-//       var err = new Error('You are not authenticated!');
-//       res.setHeader('WWW-Authenticate', 'Basic');      
-//       err.status = 401;
-//       next(err);
-//   }
-// }
-
-// app.use(auth);
-
-
+app.use((req, res, next)=>{
+	res.header("Access-Control-Allow-Origin","*");
+	res.header(
+		"Access-Control-Allow-Header",
+		"Origin, X-Requested-With, Content-Type, Accept, Authorization"
+	);
+	if(req.method == "OPTIONS")
+	{
+		res.header("Access-Control-Allow-Methods","OPTIONS, GET, PUT, POST, DELETE");
+		return res.status(200).json({});
+	}
+	next();
+});
 
 
 // routers

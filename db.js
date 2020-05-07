@@ -1,5 +1,7 @@
 var mysql = require('mysql');
 
+
+/*
 var connection = mysql.createConnection({
 	//properties
 	host: 'localhost',
@@ -7,6 +9,19 @@ var connection = mysql.createConnection({
     password: '',
     database: 'portaldb'
 });
+*/
+
+
+var connection = mysql.createConnection({
+	//properties
+	host: 'us-cdbr-east-06.cleardb.net',
+    user: 'b77bf3d69101eb',
+    password: 'ce0375b8',
+    database: 'heroku_bce77c5f82e9275'
+});
+
+
+
 
 connection.connect(function(error){
 	if(error){
