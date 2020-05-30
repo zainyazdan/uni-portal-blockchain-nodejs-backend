@@ -4,24 +4,24 @@ var mysql = require('mysql');
 
 
 
-// var connection = mysql.createConnection({
-// 	//properties
-// 	host: 'localhost',
-//     user: 'root',
-//     password: '',
-//     database: 'portaldb'
-// });
-
-
-
-
 var connection = mysql.createConnection({
 	//properties
-	host: 'u3r5w4ayhxzdrw87.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
-    user: 'n4pavnb3gzarryri',
-    password: 'cykg7qt9izbu50ob',
-    database: 'gvqo6gf79qtvgv62'
+	host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'portaldb'
 });
+
+
+
+
+// var connection = mysql.createConnection({
+// 	//properties
+// 	host: 'u3r5w4ayhxzdrw87.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
+//     user: 'n4pavnb3gzarryri',
+//     password: 'cykg7qt9izbu50ob',
+//     database: 'gvqo6gf79qtvgv62'
+// });
 
 
 // var connection = mysql.createConnection({
