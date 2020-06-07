@@ -40,7 +40,7 @@ connection.connect(function(error){
 		console.log(error);
 	}
 	else{
-		console.log("Connected To The Database");
+		console.log("Connected To The Database\n");
 	}
 });
 
