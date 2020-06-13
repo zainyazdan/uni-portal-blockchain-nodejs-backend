@@ -4,6 +4,7 @@ var encryption = require("./encryption");
 
 
 const MyContract = require('./MyContract.json');
+const { log } = require('debug');
 
 
 //https://www.dappuniversity.com/articles/web3-js-intro
@@ -31,7 +32,9 @@ module.exports.getData = async function (_key)
 {
     const contract = await MakeInstance();
     const data = await contract.methods.GetData(_key).call();
-   
+
+    // console.log("JSON.parse(data) : ", JSON.parse(data));
+
     return JSON.parse(data);
 }
 

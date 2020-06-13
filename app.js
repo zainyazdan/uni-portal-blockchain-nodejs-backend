@@ -12,7 +12,7 @@ var usersRouter = require('./routes/users');
 var studentRouter = require('./routes/studentRouter');
 var teacherRouter = require('./routes/teacherRouter');
 var adminRouter = require('./routes/adminRouter');
-
+var deanRouter = require('./routes/deanRouter');
 
 
 var app = express();
@@ -30,18 +30,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 
-app.use((req, res, next)=>{
-	res.header("Access-Control-Allow-Origin","*");
-	res.header(
-		"Access-Control-Allow-Header",
-		"Origin, X-Requested-With, Content-Type, Accept, Authorization"
-	);
-	if(req.method == "OPTIONS")
-	{
-		res.header("Access-Control-Allow-Methods","OPTIONS, GET, PUT, POST, DELETE");
-		return res.status(200).json({});
-	}
+app.use((req, res, next)=>
+{
+
+	res.header('Access-Control-Allow-Origin', "*");
+    res.header('Access-Control-Allow-Methods','GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
 	next();
+	
 });
 
 
@@ -50,10 +46,10 @@ app.use((req, res, next)=>{
 app.use('/student',studentRouter);
 app.use('/teacher',teacherRouter);
 app.use('/admin',adminRouter);
-
-
+app.use('/dean',deanRouter);
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+
 
 
 app.get('/zain',function(req,res){

@@ -288,4 +288,33 @@ studentRouter.route('/:test')
 });
 
 
+
+studentRouter.route('/:admin_Id/test2')
+.get( (req,res,next) => {
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+})
+.post((req, res, next) => {
+
+	console.log("firstName : " + req.body.firstName);
+	console.log("firstName : " + req.body.lastName);
+	
+
+	res.statusCode = 200;
+	res.setHeader('Content-Type', 'application/json');   
+	return  res.end(JSON.stringify({status:true, Lname: req.body.lastName, Fname :  req.body.firstName}))
+});
+
+
+
+
+
+
+
+
+
+
+
 module.exports = studentRouter;

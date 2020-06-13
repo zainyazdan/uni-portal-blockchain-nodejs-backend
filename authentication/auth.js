@@ -115,5 +115,39 @@ module.exports = {
 			res.json({success: false, 
 				message: "Access Denied! Un-Authorized user"})
 		}
-	}	
+	}
+	,
+
+	verifyDean : (req, res ,next)=>{
+
+		// console.log("auth ayaa !!");		
+		//let token = req.body.token;
+
+		let token = req.get("authorization")
+		if(token)
+		{
+			//console.log("token : "+ token);
+			token = token.slice(7);
+
+			verify(token, config.secretKey_dean ,(err, decoded)=>{
+
+				if(err)
+				{
+					res.statusCode = 401;
+					res.json({success: false, 
+					message: "Invalid token !!"})
+				}
+				else
+				{
+					next();
+				}
+				//console.log("payload : "+decoded);
+			});
+		}
+		else{
+			res.statusCode = 401;
+			res.json({success: false, 
+				message: "Access Denied! Un-Authorized user"})
+		}
+	}		
 }

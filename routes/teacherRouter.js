@@ -5,6 +5,7 @@ var mysql = require('mysql');
 var queryHelper = require('../query');
 
 var blockchain = require("../Blockchain/blockchain");
+var recordVerification = require("../Blockchain/recordVerification");
 
 
 var sha256 = require('js-sha256');
@@ -17,7 +18,8 @@ teacherRouter.use(bodyParser.json());
 const { sign } = require("jsonwebtoken")
 const { verifyTeacher } = require("../authentication/auth")
 const { secretKey_Teacher } = require("../config")
-const { tokenExpireTime } = require("../config")
+const { tokenExpireTime } = require("../config");
+const { log } = require('debug');
 
 
 
@@ -733,12 +735,12 @@ teacherRouter.route('/:teacherId/approve_assesment')
 			return;
 		}
 
-		// if(result[0].status == "Approved")
-		// {
-		// 	res.setHeader('Content-Type', 'application/json');   
-		// 	res.end(JSON.stringify({ status: false, message: "This assesment is already approved" }));
-		// 	return;
-		// }
+		if(result[0].status == "Approved")
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "This assesment is already approved" }));
+			return;
+		}
 
 		asses_id = result[0].id;
 
@@ -951,9 +953,6 @@ teacherRouter.route('/:teacherId/approve_assesment')
 
 
 
-
-
-
 // disapprove assesment (completed)
 
 teacherRouter.route('/:teacherId/verify_assessment')
@@ -975,7 +974,7 @@ teacherRouter.route('/:teacherId/verify_assessment')
 		var key = req.body.semester+":"+req.body.course+":"+req.body.section+":"+req.body.marks_type+"#"+req.body.assesment_no; 
 		// console.log("key : " + key);
 		
-		return VerifyAssesment([result[0].id], key)
+		return recordVerification.VerifyAssesment(result[0].id , key)
 	})
 	.then((result)=>{
 		// console.log("Result AYA : " , result);
@@ -990,11 +989,11 @@ teacherRouter.route('/:teacherId/verify_assessment')
 			// console.log("Result : ", result);
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-			res.end(JSON.stringify({ status: true, message: "Data is tampered", data : result}));
+			res.end(JSON.stringify({ status: false, message: "Data is tampered", data : result}));
 		}
 	})
-	.catch(function(result){
-		console.log("ERROR : " + result);
+	.catch(function(err){
+		console.log("ERROR : " + err);
 	});
 })
 .post(verifyTeacher, (req,res,next) => {
@@ -1018,11 +1017,11 @@ teacherRouter.route('/:teacherId/verify_assessment')
 
 // to verify all assesments of a specific section
 
-teacherRouter.route('/:teacherId/verify_all_assessment')
-.get((req, res, next) => {
-
-	var query = "select a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = ? and c.name = ? and sec.name = ? and assesment_no = ? and mt.type_name = ?  and a.status = 'Approved' "; 
-	var params = [ req.body.semester, req.body.course, req.body.section, req.body.assesment_no, req.body.marks_type ];
+teacherRouter.route('/:teacherId/verify_all_assessments')
+.get((req, res, next) => 
+{
+	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = 'fall16' and c.name = 'CCN' and sec.name = 'A' and a.status = 'Approved'"; 
+	var params = [ req.body.semester, req.body.course, req.body.section];
 
 	var primise = queryHelper.Execute(query, params);
 	primise.then(function(result){
@@ -1034,13 +1033,17 @@ teacherRouter.route('/:teacherId/verify_all_assessment')
 			return;
 		}
 
-		var key = req.body.semester+":"+req.body.course+":"+req.body.section+":"+req.body.marks_type+"#"+req.body.assesment_no; 
+		//var key = req.body.semester+":"+req.body.course+":"+req.body.section+":"+req.body.marks_type+"#"+req.body.assesment_no; 
 		// console.log("key : " + key);
 		
-		return VerifyAssesment([result[0].id], key)
+
+		
+		// return VerifyAssesment(IdsArray[0], KeysArray[0]);
+		// return VerifyAssesment([result[0].id], key)
+		
+		return recordVerification.VerifyAllAssessments(req, result);
 	})
 	.then((result)=>{
-		// console.log("Result AYA : " , result);
 		if(result == "ok")
 		{
 			res.statusCode = 200;
@@ -1052,11 +1055,11 @@ teacherRouter.route('/:teacherId/verify_all_assessment')
 			// console.log("Result : ", result);
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-			res.end(JSON.stringify({ status: true, message: "Data is tampered", data : result}));
+			res.end(JSON.stringify({ status: false, message: "Data is tampered", data : result}));
 		}
 	})
 	.catch(function(result){
-		console.log("ERROR : " + result);
+		console.log("ERROR 22: " + result);
 	});
 })
 .post(verifyTeacher, (req,res,next) => {
@@ -1079,187 +1082,6 @@ teacherRouter.route('/:teacherId/verify_all_assessment')
 
 
 
-
-
-
-
-async function VerifyAssesment(_ids, key)
-{
-	var fincalResult = [];
-
-	//for (let i = 0; i < _ids.length; i++) {
-	
-	
-	var query = "select std.reg_no, ha.obtained_marks, a.total_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid where a.id = ? order by std.reg_no"; 
-	var db_result = await queryHelper.Execute(query, _ids[0]);
-
-	// console.log("Database result : ", JSON.stringify(db_result));
-	
-	let local_data = {
-		reg_no:[],
-		marks:[], 
-		total_marks : 0
-	};
-
-	local_data.reg_no = db_result.map(x => x.reg_no);
-	local_data.marks = db_result.map(x => x.obtained_marks);
-	local_data.total_marks = db_result[0].total_marks;
-
-	var local_hash = await sha256(JSON.stringify(db_result));
-	
-	var blockchain_data = await blockchain.getData(key);
-
-	// console.log("(VerifyAssesment) local_data : ", local_data);
-
-	// console.log("(VerifyAssesment) blockchain_data : ", blockchain_data);
-	
-	// console.log("(VerifyAssesment) local_hash : "+ local_hash);
-	// console.log("(VerifyAssesment) blockchain_data.hash : "+ blockchain_data.hash);
-
-	if(local_hash == blockchain_data.hash)
-	{
-		return "ok";
-	}
-	else
-	{
-		var chech_data = await compareRecords(local_data, blockchain_data);
-		fincalResult.push(chech_data);
-	}
-
-	// console.log("fincalResult.length:  "+ fincalResult.length);
-	// console.log("fincalResult:  ", fincalResult);
-	
-	if(fincalResult.length == 0)
-	{
-		return "ok";
-	}
-	else
-	{
-		return fincalResult;
-	}
-}
-
-
-async function compareRecords(_local, _blockchain)
-{
-	// console.log("_local : ", _local);
-	// console.log("_blockchain : ", _blockchain);
-	
-
-	let result = {
-		reg_no:[],
-		marks_before:[],
-		marks_after:[]
-	};
-	// _blockchain :  {
-	// 	hash: '1f4cd34284006392e0de6e2b7ee199597be0086e9dc45283ce8b319b6c0f18db',
-	// 	records: {
-	// 	  reg_no: [ 'L1F16BSCS0157', 'L1F16BSCS0145', 'L1F16BSCS0151' ],
-	// 	  marks: [ 15, 10, 11 ]
-	// 	}
-	//   }
-
-
-	// _local :  {
-	// 	reg_no: [ 'L1F16BSCS0157', 'L1F16BSCS0145', 'L1F16BSCS0151' ],
-	// 	marks: [ 5, 10, 11 ]
-	//   }
-
-	if(_local.total_marks != _blockchain.records.total_marks)
-	{
-		result.total_marks_before = _blockchain.records.total_marks;
-		result.total_marks_after = _local.total_marks;
-	}
-
-
-	for (let i = 0; i < _local.reg_no.length; i++) 
-	{
-		// console.log("old = " + _blockchain.records.marks[i] + " , new : "+_local.marks[i]);
-		
-		if(_local.marks[i] != _blockchain.records.marks[i])
-		{
-			// console.log("Store (push)");
-			
-			result.reg_no.push(_local.reg_no[i]);
-			result.marks_before.push(_blockchain.records.marks[i]);
-			result.marks_after.push(_local.marks[i]);
-		}	
-	}
-	
-	return result;
-}
-
-
-
-
-
-
-
-
-
-// // disapprove assesment (completed)
-
-// teacherRouter.route('/:teacherId/disapprove_assesment')
-// .get(verifyTeacher, (req, res, next) => {
-	
-// 	res.statusCode = 403;
-// 	res.setHeader('Content-Type', 'application/json');   
-// 	res.end(JSON.stringify({ status: false, message: "GET operation not supported on /:teacherId/disapprove_assesment" }));
-    
-// })
-// .post(verifyTeacher, (req,res,next) => {
-// 	res.statusCode = 403;
-// 	res.setHeader('Content-Type', 'application/json');   
-// 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/disapprove_assesment" }));
-// })
-// .put(  (req,res,next) => {	
-	
-// 	var query1 = "select a.status, a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ?  and sem.name = ?  and assesment_no = ? and mt.type_name = ? ";
-// 	var params1 = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
-
-// 	var asses_id;
-
-// 	var primise = queryHelper.Execute(query1, params1);	
-// 	primise.then(function(result){
-
-// 		if(result.length == 0)
-// 		{
-// 			res.setHeader('Content-Type', 'application/json');   
-// 			res.end(JSON.stringify({ status: false, message: "Tsection/courser/semester/assesment_no/marks_type records not found" }));
-// 			return;
-// 		}
-
-// 		if(result[0].status == "Not Approved")
-// 		{
-// 			res.setHeader('Content-Type', 'application/json');   
-// 			res.end(JSON.stringify({ status: false, message: "This assesment is already 'Not Approved'" }));
-// 			return;
-// 		}
-
-// 		asses_id = result[0].id;
-
-// 		var query2 = "update assesments set status = 'Not Approved' where id = ?"; 
-// 		var params2 = [ asses_id ];
-
-// 		return queryHelper.Execute(query2, params2);
-// 	})
-// 	.then(function(result){
-
-// 		res.statusCode = 200;
-// 		res.setHeader('Content-Type', 'application/json');   
-// 		res.end(JSON.stringify({ status: true, message: "Successfully Disapproved" }));
-// 	})
-// 	.catch(function(result){
-// 		console.log("ERROR : " + result);
-// 	});
-
-// })
-// .delete(verifyTeacher, (req,res,next) => {
-// 	res.statusCode = 403;
-// 	res.setHeader('Content-Type', 'application/json');   
-// 	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/disapprove_assesment" }));
-    
-// });
 
 
 
