@@ -610,7 +610,7 @@ teacherRouter.route('/:teacherId/upload_marks/students')
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
 			res.end(JSON.stringify({ status: false, error: err }));
-		});// promise.all catch()
+		});
 	})
 	.catch(function(err){
 		res.statusCode = 200;
@@ -1081,6 +1081,196 @@ teacherRouter.route('/:teacherId/verify_all_assessments')
 
 
 
+
+// to verify all assesments of a specific section
+
+teacherRouter.route('/:teacherId/calculate_grades')
+.get((req, res, next) => 
+{
+	var query1 = "select sec.id, sec.status from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where sem.name = ? and c.name = ?	and sec.name = ?	having count(a.id) = 	(	select count(a.id)	from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where a.status = 'Approved' and sem.name = ? and c.name = ?	and sec.name = ? )";
+	var params1 = [ req.body.semester, req.body.course, req.body.section, req.body.semester, req.body.course, req.body.section];
+
+	var sec_id;
+
+	var primise = queryHelper.Execute(query1, params1);
+	primise.then(function(result){
+
+		console.log("result : ", result);
+		
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "All assesments are not approved" }));
+			return;
+		}
+
+		if(result[0].status == "closed")
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "This section's status is closed" }));
+			return;
+		}
+
+		sec_id = result[0].id;
+
+		var query2 = "select std.id, std.reg_no, sum(t1.Persentage) as persentage from student as std join (select std.id as id, std.reg_no, (sum(ha.obtained_marks)/sum(a.total_marks))*co.weightage as Persentage ,co.weightage, mt.type_name from student as std 	join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id	where a.status = 'Approved' and sem.name = ? and c.name = ? and sec.name = ?	group by std.reg_no, mt.type_name	order by std.reg_no) as t1 on std.id = t1.id	group by t1.reg_no";
+		var params2 = [ req.body.semester, req.body.course, req.body.section];
+		
+		return queryHelper.Execute(query2, params2);
+	})
+	.then((result)=>{
+
+		let data = {
+			id:[],
+			reg_no:[],
+			persentage:[],
+			grade:[]
+		};
+
+		// console.log("sec_id : ", sec_id);
+		// console.log("result : ", result);
+		// console.log("result[0] : ", result[0].reg_no);
+
+		data.reg_no = result.map(x => x.reg_no);
+		data.id = result.map(x => x.id);
+		data.persentage = result.map(x => x.persentage);
+		data.grade = result.map(function(x){
+			if(x.persentage >= 90 && x.persentage <= 100)
+				return 'A'
+			else if(x.persentage >= 86 && x.persentage <= 89)
+				return 'A-'
+			else if(x.persentage >= 80 && x.persentage <= 85)
+				return 'B+'
+			else if(x.persentage >= 90 && x.persentage <= 100)
+				return 'B'
+			else if(x.persentage >= 90 && x.persentage <= 100)
+				return 'C'
+		});
+		//console.log("Data : ", data);
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+		res.end(JSON.stringify({ status: true, message: data }));
+
+	})
+	.catch(function(result){
+		console.log("ERROR 22: " + result);
+	});
+
+})
+.post( (req,res,next) => {
+
+
+	var query1 = "select sec.id, sec.status from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where sem.name = ? and c.name = ?	and sec.name = ?	having count(a.id) = 	(	select count(a.id)	from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where a.status = 'Approved' and sem.name = ? and c.name = ?	and sec.name = ? )";
+	var params1 = [ req.body.semester, req.body.course, req.body.section, req.body.semester, req.body.course, req.body.section];
+
+	var sec_id;
+
+	var primise = queryHelper.Execute(query1, params1);
+	primise.then(function(result){
+
+		console.log("result : ", result);
+		
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "All assesments are not approved" }));
+			return;
+		}
+
+		if(result[0].status == "closed")
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "This section's status is closed" }));
+			return;
+		}
+
+		sec_id = result[0].id;
+
+		var query2 = "select std.id, std.reg_no, sum(t1.Persentage) as persentage from student as std join (select std.id as id, std.reg_no, (sum(ha.obtained_marks)/sum(a.total_marks))*co.weightage as Persentage ,co.weightage, mt.type_name from student as std 	join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id	where a.status = 'Approved' and sem.name = ? and c.name = ? and sec.name = ?	group by std.reg_no, mt.type_name	order by std.reg_no) as t1 on std.id = t1.id	group by t1.reg_no";
+		var params2 = [ req.body.semester, req.body.course, req.body.section];
+		
+		return queryHelper.Execute(query2, params2);
+	})
+	.then((result)=>{
+
+		let data = {
+			id:[],
+			reg_no:[],
+			persentage:[],
+			grade:[]
+		};
+
+		// console.log("sec_id : ", sec_id);
+		// console.log("result : ", result);
+		// console.log("result[0] : ", result[0].reg_no);
+
+		data.reg_no = result.map(x => x.reg_no);
+		data.id = result.map(x => x.id);
+		data.persentage = result.map(x => x.persentage);
+		data.grade = result.map(function(x){
+			if(x.persentage >= 90 && x.persentage <= 100)
+				return 'A'
+			else if(x.persentage >= 86 && x.persentage <= 89)
+				return 'A-'
+			else if(x.persentage >= 80 && x.persentage <= 85)
+				return 'B+'
+			else if(x.persentage >= 90 && x.persentage <= 100)
+				return 'B'
+			else if(x.persentage >= 90 && x.persentage <= 100)
+				return 'C'
+		});
+		console.log("Data : ", data);
+
+
+
+		var query2 = "update enrolled_in set grade = ? where sec_id = ? and std_id = ?";				
+		var promiseArray = [];
+
+
+		for (let i = 0; i < data.grade.length ; i++) 
+		{	
+			//console.log("Chala : "+ i);
+			var params2 = [ data.grade[i] , sec_id, data.id[i] ];			
+			promiseArray[i] = queryHelper.Execute(query2, params2);
+		}
+
+		Promise.all(promiseArray).then((result)=>{	
+
+			var query2 = "update section set status = 'closed' where id = ?";
+			var params2 = [ sec_id ];
+			
+			return queryHelper.Execute(query2, params2);
+		})
+		.then((result) =>{
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Grades Successfully Inserted" }));
+		})
+		.catch(( err ) => {
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, error: err }));
+		});
+
+	})
+	.catch(function(result){
+		console.log("ERROR 22: " + result);
+	});
+	
+})
+.put(  (req,res,next) => {	
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
+})
+.delete(verifyTeacher, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
+    
+});
 
 
 

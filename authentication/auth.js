@@ -1,6 +1,7 @@
 
 const { verify } = require("jsonwebtoken")
-const config = require("../config")
+const config = require("../config");
+const { log } = require("debug");
 
 
 // console.log("aya re");
@@ -47,15 +48,22 @@ module.exports = {
 	,
 	verifyStudent : (req, res ,next)=>{
 
-		// console.log("auth ayaa !!");		
+		//console.log("rawHeaders : " , req.rawHeaders);
+		//console.log("auth ayaa !!");		
+
+		
 		//let token = req.body.token;
 
 		let token = req.get("authorization")
 		if(token)
 		{
-			//console.log("token : "+ token);
+			//console.log("token 12 : "+ token);
 
-			token = token.slice(7);
+			if(token.includes("Bearer"))
+				token = token.slice(7);
+
+
+			//console.log("After Slice: "+ token);
 
 			verify(token, config.secretKey_Student ,(err, decoded)=>{
 
@@ -76,6 +84,8 @@ module.exports = {
 			});
 		}
 		else{
+			console.log("Wapis");
+			
 			res.statusCode = 401;
 			res.json({success: false, 
 				message: "Access Denied! Un-Authorized user"})

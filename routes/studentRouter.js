@@ -12,19 +12,20 @@ studentRouter.use(bodyParser.json());
 const { sign } = require("jsonwebtoken")
 const { verifyStudent } = require("../authentication/auth")
 const { secretKey_Student } = require("../config")
-const { tokenExpireTime } = require("../config")
+const { tokenExpireTime } = require("../config");
+const { log } = require('debug');
 
 
 
 studentRouter.route('/:admin_Id/login')
-.get(verifyStudent, (req,res,next) => {
+.get( (req,res,next) => {
 
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+	console.log("Request : ",req );
+	res.statusCode = 200;
+	res.setHeader('Content-Type', 'application/json');   
+	return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
 })
 .post((req, res, next) => {
-
 	
 	var query = "select u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ? and u.password = ?";
 	var params = [req.body.username, req.body.password];
@@ -154,7 +155,7 @@ studentRouter.route('/:studentId/course_outline')
 
 
 studentRouter.route('/:studentId/courses')
-.get(verifyStudent, (req,res,next) => {
+.patch( (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where s.reg_no = ? and sem.name = ? ";
 	var params = [ req.params.studentId ,req.body.semester];
@@ -259,6 +260,9 @@ studentRouter.route('/:studentId/test')
 });
 
 
+
+
+
 studentRouter.route('/:test')
 .get((req,res,next) => {
 
@@ -292,15 +296,26 @@ studentRouter.route('/:test')
 studentRouter.route('/:admin_Id/test2')
 .get( (req,res,next) => {
 
+		req.body.name = "ZAIN";
+
+		console.log("req : ", req.body);
+		
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
 	    return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
 })
+.patch( (req, res, next) => {
+
+	console.log("req : ", req.body);
+	
+	res.statusCode = 200;
+	res.setHeader('Content-Type', 'application/json');   
+	return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+})
 .post((req, res, next) => {
 
-	console.log("firstName : " + req.body.firstName);
-	console.log("firstName : " + req.body.lastName);
-	
+	console.log("req : ", req.body);
+
 
 	res.statusCode = 200;
 	res.setHeader('Content-Type', 'application/json');   

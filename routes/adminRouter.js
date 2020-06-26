@@ -93,7 +93,7 @@ adminRouter.route('/:admin_Id/students')
 })
 .post(verifyAdmin, (req, res, next) => {
 	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email) values(?,?,?,?,?,?,?)";
-	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email];
+	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password ];
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){

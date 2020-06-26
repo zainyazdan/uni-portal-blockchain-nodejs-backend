@@ -33,7 +33,7 @@ module.exports.getData = async function (_key)
     const contract = await MakeInstance();
     const data = await contract.methods.GetData(_key).call();
 
-    // console.log("JSON.parse(data) : ", JSON.parse(data));
+    console.log("JSON.parse(data) : ", JSON.parse(data));
 
     return JSON.parse(data);
 }
