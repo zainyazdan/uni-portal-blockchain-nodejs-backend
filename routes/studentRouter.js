@@ -16,9 +16,9 @@ const { tokenExpireTime } = require("../config");
 const { log } = require('debug');
 
 
-
+// #done
 studentRouter.route('/:admin_Id/login')
-.get( (req,res,next) => {
+.get(verifyStudent, (req,res,next) => {
 
 	console.log("Request : ",req );
 	res.statusCode = 200;
@@ -27,10 +27,17 @@ studentRouter.route('/:admin_Id/login')
 })
 .post((req, res, next) => {
 	
-	var query = "select u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ? and u.password = ?";
+	var query = "select s.reg_no, u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ? and u.password = ?";
 	var params = [req.body.username, req.body.password];
 	
 	var primise = queryHelper.Execute(query, params);	
+	var data = {
+		message: "",
+		token : "",
+		semester: "",
+		reg_no : ""
+	};
+
 
 	primise.then(function(results){
 
@@ -43,17 +50,39 @@ studentRouter.route('/:admin_Id/login')
 
 		const jsontoken = sign({user: 'student', result :results }, secretKey_Student ,{expiresIn: tokenExpireTime});
 
+		data.token = jsontoken;
+		data.reg_no = results[0].reg_no;
+
+		var query2 = "select name from semester where status = 'current'";
+		return queryHelper.Execute(query2);	
+	})
+	.then(function(results){
+		
+		if(results.length == 0)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+		}
+
+		data.message = "Successfully Logged-in";
+		data.semester = results[0].name;
+
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, meassage: "Successfully Logged-in",token : jsontoken }))
 
-	}).catch(function(result){
+		return  res.end(JSON.stringify({status:true, data }));
+		
+
+
+	})
+	.catch(function(result){
 		console.log("ERROR : " + result);
 	});
 });
 
 
-
+// #done
 studentRouter.route('/:studentId/personal_info')
 .get(verifyStudent, (req,res,next) => {
 
@@ -83,11 +112,17 @@ studentRouter.route('/:studentId/personal_info')
 });
 
 
-studentRouter.route('/:studentId/announcements')
-.get(verifyStudent, (req,res,next) => {
 
+// #done
+studentRouter.route('/:studentId/:semester/:course/:section/announcements')
+.get(verifyStudent, (req,res,next) => {
+	// {
+	// 	"semester": "Fall16",
+	// 	"course": "CCN",
+	// 	"section": "A"
+	// }
 	var query = "select a.announcement, a.date, a.time from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join announcements as a on a.sec_id=sec.id where s.reg_no = ? and sem.name=? and c.name = ? and sec.name = ?";
-	var params = [ req.params.studentId ,req.body.semester ,req.body.course ,req.body.section];
+	var params = [ req.params.studentId ,req.params.semester ,req.params.course ,req.params.section];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
@@ -114,12 +149,12 @@ studentRouter.route('/:studentId/announcements')
 });
 
 
-
-studentRouter.route('/:studentId/course_outline')
+// #done
+studentRouter.route('/:studentId/:semester/:course/:section/course_outline')
 .get(verifyStudent, (req,res,next) => {
 
 	var query = "select mt.type_name as Type,co.weightage,co.no_of_selected from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join course_outline as co on co.sec_id=sec.id join marks_type as mt on mt.id=co.mt_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where s.reg_no = ? and sem.name= ? and c.name = ? and sec.name = ? ";
-	var params = [ req.params.studentId ,req.body.semester, req.body.course, req.body.section ];
+	var params = [ req.params.studentId ,req.params.semester, req.params.course, req.params.section ];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
@@ -153,9 +188,9 @@ studentRouter.route('/:studentId/course_outline')
 
 
 
-
+// #done
 studentRouter.route('/:studentId/courses')
-.patch( (req,res,next) => {
+.get( (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where s.reg_no = ? and sem.name = ? ";
 	var params = [ req.params.studentId ,req.body.semester];
@@ -189,11 +224,13 @@ studentRouter.route('/:studentId/courses')
 });
 
 
-studentRouter.route('/:studentId/gradebook')
+// #done
+studentRouter.route('/:studentId/:semester/:course/:section/gradebook')
 .get(verifyStudent, (req,res,next) => {
 
-	var query = "select mt.type_name,m.assesment_no, m.date, m.time, m.total_marks, m.obtained_marks from section as sec join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join has_marks as hm on sec.id = hm.sec_id join student as std on std.id = hm.std_id join marks as m on m.id = hm.mid join marks_type as mt on mt.Id=m.mt_id where sem.name= ? and c.name = ? and sec.name = ? and reg_no  = ? order by mt.type_name asc, m.assesment_no asc";
-	var params = [ req.body.semester, req.body.course, req.body.section, req.params.studentId];
+	var query = "select mt.type_name,a.date,a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id where sem.name = ?	and c.name = ? and sec.name = ? and std.reg_no = ? ORDER BY mt.type_name"; 
+	
+	var params = [ req.params.semester, req.params.course, req.params.section, req.params.studentId];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
@@ -235,7 +272,8 @@ studentRouter.route('/:studentId/test')
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');
-	    res.end(JSON.stringify(result));
+		res.end(JSON.stringify(result));
+		
 	}).catch(function(result){
 		console.log("ERROR : " + result);
 		res.send(result);	

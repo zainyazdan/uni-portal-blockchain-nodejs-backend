@@ -23,7 +23,7 @@ const { log } = require('debug');
 
 
 
-
+// #done
 teacherRouter.route('/:teacher_Id/login')
 .get(verifyTeacher, (req,res,next) => {		// For testing pupposes
 
@@ -31,13 +31,22 @@ teacherRouter.route('/:teacher_Id/login')
 		res.setHeader('Content-Type', 'application/json');   
 	    return  res.end(JSON.stringify({status:true, message: "Ho gea teacher!!" }))
 })
-.post((req, res, next) => {
+.post(verifyTeacher, (req, res, next) => {
 
-	var query = "select u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ?and u.password=?";
+	var query = "select t.reg_no,u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ?and u.password=?";
 	var params = [req.body.username, req.body.password];
 	
 
 	var primise = queryHelper.Execute(query, params);	
+	var data = {
+		message: "",
+		token : "",
+		semester: "",
+		reg_no : ""
+	};
+
+
+
 
 	primise.then(function(results){
 
@@ -50,16 +59,42 @@ teacherRouter.route('/:teacher_Id/login')
 
 		const jsontoken = sign({user: 'teacher', result :results }, secretKey_Teacher ,{expiresIn: tokenExpireTime});
 
+		data.token = jsontoken;
+		data.reg_no = results[0].reg_no;
+
+		var query2 = "select name from semester where status = 'current'";
+		return queryHelper.Execute(query2);	
+	})
+	.then(function(results){
+
+		if(results.length == 0)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+		}
+
+		data.message = "Successfully Logged-in";
+		data.semester = results[0].name;
+
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, meassage: "Successfully Logged-in",token : jsontoken }))
 
-	}).catch(function(result){
+		return  res.end(JSON.stringify({status:true, data }));
+	})
+	.catch(function(result){
 		console.log("ERROR : " + result);
 	});
 });
 
 
+async function  getCurrentSemester()
+{
+	var query = "select name from semester where status = 'current'";
+	var result = await	queryHelper.Execute(query, params);	
+
+	return result[0].name;
+}
 
 
 
@@ -69,7 +104,7 @@ teacherRouter.route('/:teacher_Id/login')
 
 
 
-
+// #done
 teacherRouter.route('/:teacherId/personal_info')
 .get(verifyTeacher, (req,res,next) => {
 
@@ -89,8 +124,8 @@ teacherRouter.route('/:teacherId/personal_info')
 
 
 
-
-teacherRouter.route('/:teacherId/announcements')
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/announcements')
 .get(verifyTeacher, (req,res,next) => {
 
 	var query = "select a.announcement, a.date, a.time from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join announcements as a on a.sec_id=sec.id where t.reg_no = ? and sem.name=? and c.name = ? and sec.name = ?";
@@ -153,11 +188,12 @@ teacherRouter.route('/:teacherId/announcements')
 });
 
 
-teacherRouter.route('/:teacherId/courses')
+// #done
+teacherRouter.route('/:teacherId/:semester/courses')
 .get(verifyTeacher, (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name= ?;";
-	var params = [ req.params.teacherId ,req.body.semester];
+	var params = [ req.params.teacherId ,req.params.semester];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
@@ -188,12 +224,12 @@ teacherRouter.route('/:teacherId/courses')
 });
 
 
-
-teacherRouter.route('/:teacherId/course_outline')
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/course_outline')
 .get(verifyTeacher, (req,res,next) => {
 
 	var query = "select mt.type_name as Type,co.weightage,co.no_of_selected from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join course_outline as co on co.sec_id=sec.id join marks_type as mt on mt.id=co.mt_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name = ? and c.name = ? and sec.name = ?";
-	var params = [ req.params.teacherId ,req.body.semester, req.body.course, req.body.section ];
+	var params = [ req.params.teacherId ,req.params.semester, req.params.course, req.params.section ];
 
 
 	var primise = queryHelper.Execute(query,params);	
@@ -420,11 +456,12 @@ teacherRouter.route('/:teacherId/course_outline')
 
 // upload marks of a specific student  (completed)
 
-teacherRouter.route('/:teacherId/upload_marks/students/:student_id')
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/upload_marks/students/:student_id')
 .get(verifyTeacher, (req,res,next) => {
 
 	var query = "select a.status, std.reg_no, u.name, a.date, a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ? and sem.name = ? and assesment_no = ? and mt.type_name = ? and std.reg_no = ?";
-	var params = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no, req.body.marks_type , req.params.student_id];
+	var params = [ req.params.section, req.params.course, req.params.semester, req.params.assesment_no, req.params.marks_type , req.params.student_id];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
@@ -496,13 +533,14 @@ teacherRouter.route('/:teacherId/upload_marks/students/:student_id')
 
 // upload marks of all students  (completed)
 
-teacherRouter.route('/:teacherId/upload_marks/students')
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/upload_marks/students')
 .get(verifyTeacher, (req, res, next) => 
 {
 	var query = "select a.status, std.reg_no, u.name, a.date, a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id where sec.name = ? and c.name = ? and sem.name = ? and assesment_no = ? and mt.type_name = ? "; 
-	var params = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
+	var params = [ req.params.section, req.params.course, req.params.semester, req.params.assesment_no,   req.params.marks_type ];
 
-	var primise = queryHelper.Execute(query,params);	
+	var primise = queryHelper.Execute(query,params);
 	primise.then(function(result){
 
 		res.statusCode = 200;
@@ -514,7 +552,7 @@ teacherRouter.route('/:teacherId/upload_marks/students')
 	});
 })
 //.post(verifyTeacher, (req,res,next) => {
-.post( (req, res, next) => {
+.post(verifyTeacher, (req, res, next) => {
 
 	var d = new Date();
 	var date = d.getDate()+"-"+(d.getMonth()+1)+"-"+d.getFullYear();
@@ -688,12 +726,14 @@ teacherRouter.route('/:teacherId/upload_marks/students')
 
 // approve assesment (completed), compute hash and store on blockchain
 
-teacherRouter.route('/:teacherId/approve_assesment')
-.get( (req, res, next) => {
+
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/approve_assesment')
+.get(verifyTeacher, (req, res, next) => {
 
 
 	var query1 = "select a.status from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ?  and sem.name = ?  and assesment_no = ? and mt.type_name = ? ";
-	var params1 = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
+	var params1 = [ req.params.section, req.params.course, req.params.semester, req.params.assesment_no,   req.params.marks_type ];
 
 	var primise = queryHelper.Execute(query1, params1);	
 	primise.then(function(result){
@@ -718,7 +758,7 @@ teacherRouter.route('/:teacherId/approve_assesment')
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/approve_assesment" }));
 })
-.put(  (req, res, next) => {	
+.put(verifyTeacher,  (req, res, next) => {	
 	
 	var query1 = "select a.status, a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ?  and sem.name = ?  and assesment_no = ? and mt.type_name = ? ";
 	var params1 = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
@@ -956,7 +996,7 @@ teacherRouter.route('/:teacherId/approve_assesment')
 // disapprove assesment (completed)
 
 teacherRouter.route('/:teacherId/verify_assessment')
-.get((req, res, next) => {
+.get(verifyTeacher, (req, res, next) => {
 
 	var query = "select a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = ? and c.name = ? and sec.name = ? and assesment_no = ? and mt.type_name = ?  and a.status = 'Approved' "; 
 	var params = [ req.body.semester, req.body.course, req.body.section, req.body.assesment_no,   req.body.marks_type ];
@@ -1001,7 +1041,7 @@ teacherRouter.route('/:teacherId/verify_assessment')
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
 })
-.put(  (req,res,next) => {	
+.put(verifyTeacher,  (req,res,next) => {	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
@@ -1018,7 +1058,7 @@ teacherRouter.route('/:teacherId/verify_assessment')
 // to verify all assesments of a specific section
 
 teacherRouter.route('/:teacherId/verify_all_assessments')
-.get((req, res, next) => 
+.get(verifyTeacher, (req, res, next) => 
 {
 	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = 'fall16' and c.name = 'CCN' and sec.name = 'A' and a.status = 'Approved'"; 
 	var params = [ req.body.semester, req.body.course, req.body.section];
@@ -1083,12 +1123,12 @@ teacherRouter.route('/:teacherId/verify_all_assessments')
 
 
 // to verify all assesments of a specific section
-
-teacherRouter.route('/:teacherId/calculate_grades')
+// #done
+teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 .get((req, res, next) => 
 {
 	var query1 = "select sec.id, sec.status from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where sem.name = ? and c.name = ?	and sec.name = ?	having count(a.id) = 	(	select count(a.id)	from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where a.status = 'Approved' and sem.name = ? and c.name = ?	and sec.name = ? )";
-	var params1 = [ req.body.semester, req.body.course, req.body.section, req.body.semester, req.body.course, req.body.section];
+	var params1 = [ req.params.semester, req.params.course, req.params.section, req.params.semester, req.params.course, req.params.section];
 
 	var sec_id;
 
@@ -1114,7 +1154,7 @@ teacherRouter.route('/:teacherId/calculate_grades')
 		sec_id = result[0].id;
 
 		var query2 = "select std.id, std.reg_no, sum(t1.Persentage) as persentage from student as std join (select std.id as id, std.reg_no, (sum(ha.obtained_marks)/sum(a.total_marks))*co.weightage as Persentage ,co.weightage, mt.type_name from student as std 	join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id	where a.status = 'Approved' and sem.name = ? and c.name = ? and sec.name = ?	group by std.reg_no, mt.type_name	order by std.reg_no) as t1 on std.id = t1.id	group by t1.reg_no";
-		var params2 = [ req.body.semester, req.body.course, req.body.section];
+		var params2 = [ req.params.semester, req.params.course, req.params.section];
 		
 		return queryHelper.Execute(query2, params2);
 	})
@@ -1128,7 +1168,7 @@ teacherRouter.route('/:teacherId/calculate_grades')
 		};
 
 		// console.log("sec_id : ", sec_id);
-		// console.log("result : ", result);
+		console.log("result aya : ", result);
 		// console.log("result[0] : ", result[0].reg_no);
 
 		data.reg_no = result.map(x => x.reg_no);

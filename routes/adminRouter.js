@@ -15,8 +15,7 @@ const { tokenExpireTime } = require("../config");
 
 
 adminRouter.route('/:admin_Id/login')
-.get(verifyAdmin, (req,res,next) => {
-
+.get(verifyAdmin, (req, res, next) => {
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
@@ -24,7 +23,6 @@ adminRouter.route('/:admin_Id/login')
 })
 .post( (req, res, next) => {
 
-	
 	var query = "select u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and u.password=?";
 	var params = [req.body.username, req.body.password];
 	
@@ -51,10 +49,6 @@ adminRouter.route('/:admin_Id/login')
 });
 
 
-
-
-
-
 //adminRouter.use(bodyParser.urlencoded({ extended: true }));
 /*var params = 2;
 	var primise = query.Execute("select * from student as s join user as u on u.id=s.uid",params);	
@@ -72,10 +66,9 @@ adminRouter.route('/:admin_Id/login')
 		console.log("ERROR : "+result);
 	});*/
 
-
-
 // 3.	admin / {admin_Id} / students
 
+// #done
 adminRouter.route('/:admin_Id/students')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -92,8 +85,8 @@ adminRouter.route('/:admin_Id/students')
 	});
 })
 .post(verifyAdmin, (req, res, next) => {
-	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email) values(?,?,?,?,?,?,?)";
-	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password ];
+	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
+	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password];
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -134,8 +127,10 @@ adminRouter.route('/:admin_Id/students')
 	});
 });
 
+
 // 4.	admin / {admin_Id} / students / {student_Id}
 
+// #done
 adminRouter.route('/:admin_Id/students/:student_Id')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -157,7 +152,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 	res.statusCode = 403;
 	res.end('post operation not supported on /courses');
 })
-.put(verifyAdmin,  (req, res, next) => { 
+.put( verifyAdmin, (req, res, next) => { 
 // update student set reg_no='l1f16bscs0157'where uid=6;
 
 	var query1 = "update student set reg_no = ? where reg_no = ?"; 
@@ -173,8 +168,8 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 		var uid = result[0].uid;
 		//console.log("user id : "+result[0].uid);
 	
-		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=? where id = ?"; 
-		var params2= [req.body.name,req.body.cnic,req.body.dob,req.body.phone_no,req.body.address,req.body.father_name,req.body.email,uid];
+		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=? ,username=?, password=?  where id = ?"; 
+		var params2= [req.body.name,req.body.cnic,req.body.dob,req.body.phone_no,req.body.address,req.body.father_name,req.body.email,req.body.username,req.body.password ,uid];
 		//console.log("params2 : "+params2);
 	
 		return queryHelper.Execute(query2,params2);
@@ -212,6 +207,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 
 // 	 5.	admin / {admin_Id} / courses
 
+// #done
 adminRouter.route('/:admin_Id/courses')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -228,13 +224,6 @@ adminRouter.route('/:admin_Id/courses')
 		console.log("ERROR : " + result);
 	});	
 })
-/*
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
-	    res.end(JSON.stringify(result));
-	    res.end(JSON.stringify({ status: "Successfully Deleted" }));
-*/
-
 .post(verifyAdmin, (req, res, next) => {
 
 	var query = "insert into course(name, credithours,code) values (?,?,?)";                 
@@ -282,12 +271,12 @@ adminRouter.route('/:admin_Id/courses')
 
 
 // 	 5.	admin / {admin_Id} / courses
-
-adminRouter.route('/:admin_Id/courses/:courseId')
+// #done
+adminRouter.route('/:admin_Id/courses/:courseName')
 .get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from course where name = ?"; 
-	var primise = queryHelper.Execute(query,req.params.courseId);	
+	var primise = queryHelper.Execute(query,req.params.courseName);	
 	primise.then(function(result){
 
 		if(result.length == 0)
@@ -347,6 +336,7 @@ adminRouter.route('/:admin_Id/courses/:courseId')
 });
 
 
+// #done
 adminRouter.route('/:admin_Id/teachers')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -363,8 +353,8 @@ adminRouter.route('/:admin_Id/teachers')
 })
 .post(verifyAdmin, (req, res, next) => {
 
-	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email) values(?,?,?,?,?,?,?)";
-	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email];
+	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
+	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password];
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -410,13 +400,8 @@ adminRouter.route('/:admin_Id/teachers')
 	});
 });
 
-/*
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
-	    res.end(JSON.stringify(result));
-	    res.end(JSON.stringify({ status: "Successfully Deleted" }));
-*/
 
+// #done
 adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -438,7 +423,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 	res.statusCode = 403;
 	res.end('post operation not supported on /teachers');
 })
-.put(verifyAdmin,  (req, res, next) => {
+.put(  (req, res, next) => {
 
     var query1 = "update teacher set reg_no = ?,qualification = ? where reg_no = ?"; 
 	var params1 = [req.body.reg_no, req.body.qualification, req.params.teacher_Id];
@@ -453,8 +438,8 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 		var uid = result[0].uid;
 		//console.log("user id : "+result[0].uid);
 	
-		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=? where id = ?"; 
-		var params2= [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, uid];
+		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=?,username=?,password=? where id = ?"; 
+		var params2= [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password,  uid];
 		//console.log("params2 : "+params2);
 		return queryHelper.Execute(query2,params2);
 	}).then(function(result){
@@ -490,7 +475,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 
 });
 
-
+// #done
 adminRouter.route('/:admin_Id/assessment_type')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -550,6 +535,7 @@ adminRouter.route('/:admin_Id/assessment_type')
 });
 
 
+// #done
 adminRouter.route('/:admin_Id/assessment_type/:type_name')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -610,6 +596,7 @@ adminRouter.route('/:admin_Id/assessment_type/:type_name')
 });
 
 
+// #done
 adminRouter.route('/:admin_Id/semester')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -669,7 +656,7 @@ adminRouter.route('/:admin_Id/semester')
 });
 
 
-
+// #done
 adminRouter.route('/:admin_Id/semester/:semesterId')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -730,7 +717,7 @@ adminRouter.route('/:admin_Id/semester/:semesterId')
 });
 
 
-
+// #done
 adminRouter.route('/:admin_Id/sections')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -820,6 +807,7 @@ adminRouter.route('/:admin_Id/sections')
 });
 
 
+// #done
 adminRouter.route('/:admin_Id/sections/:sectionId')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -911,7 +899,7 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 });
 
 
-
+// #done
 adminRouter.route('/:admin_Id/assign_section/teachers')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -930,7 +918,6 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 	});
 })
 .post(verifyAdmin, (req, res, next) => {
-
 
 	var sec_id;
 	var tid;
@@ -1034,7 +1021,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 });
 
 
-
+// #done
 adminRouter.route('/:admin_Id/assign_section/teachers/:teacher_Id')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -1092,7 +1079,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers/:teacher_Id')
 });
 
 
-
+// #done
 adminRouter.route('/:admin_Id/assign_section/students')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -1214,7 +1201,7 @@ adminRouter.route('/:admin_Id/assign_section/students')
 
 
 
-
+// #done
 adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
 .get(verifyAdmin, (req,res,next) => {
 
@@ -1277,15 +1264,6 @@ adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
 	});
 
 });
-
-
-
-
-
-
-
-
-
 
 
 

@@ -17,7 +17,8 @@ module.exports = {
 		{
 			//console.log("token : "+ token);
 
-			token = token.slice(7);
+			if(token.includes("Bearer"))
+				token = token.slice(7);
 
 			verify(token, config.secretKey_Admin ,(err, decoded)=>{
 
@@ -103,7 +104,8 @@ module.exports = {
 		{
 			//console.log("token : "+ token);
 
-			token = token.slice(7);
+			if(token.includes("Bearer"))
+				token = token.slice(7);
 
 			verify(token, config.secretKey_Teacher ,(err, decoded)=>{
 
