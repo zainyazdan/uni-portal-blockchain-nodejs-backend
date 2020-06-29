@@ -124,14 +124,14 @@ deanRouter.route('/disapprove_assessment')
 });
 
 
-
 // to verify all assesments of a specific section
 
-deanRouter.route('/verify_all_assessments/specific_section')
+// # done integrated with new smart contracts
+deanRouter.route('/:semester/:course/:section/verify_all_assessments/specific_section')
 .get((req, res, next) => 
 {
 	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = 'fall16' and c.name = 'CCN' and sec.name = 'A' and a.status = 'Approved'"; 
-	var params = [ req.body.semester, req.body.course, req.body.section];
+	var params = [ req.params.semester, req.params.course, req.params.section];
 
 	var primise = queryHelper.Execute(query, params);
 	primise.then(function(result){
@@ -143,7 +143,7 @@ deanRouter.route('/verify_all_assessments/specific_section')
 			return;
 		}
 		
-		return recordVerification.VerifyAllAssessments(req, result, "section");
+		return recordVerification.VerifyAllAssessments(req.params , result, "section");
 	})
 	.then((result)=>{
 		if(result == "ok")
@@ -184,11 +184,14 @@ deanRouter.route('/verify_all_assessments/specific_section')
 
 // to verify all assesments of a specific semester
 
-deanRouter.route('/verify_all_assessments/specific_semester')
+
+// # done integrated with new smart contracts
+
+deanRouter.route('/:semester/verify_all_assessments/specific_semester')
 .get((req, res, next) => 
 {
-	var query = "select c.name as course, sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where status = 'Approved' and sem.name = ? "; 
-	var params = [ req.body.semester];
+	var query = "select c.name as course, sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? "; 
+	var params = [ req.params.semester];
 
 	var primise = queryHelper.Execute(query, params);
 	primise.then(function(result){
@@ -201,7 +204,7 @@ deanRouter.route('/verify_all_assessments/specific_semester')
 		}
 		// console.log("result 112 : " , result);
 		
-		return recordVerification.VerifyAllAssessments(req, result, "semester");
+		return recordVerification.VerifyAllAssessments(req.params, result, "semester");
 	})
 	.then((result)=>
 	{
@@ -243,11 +246,12 @@ deanRouter.route('/verify_all_assessments/specific_semester')
 
 // to verify all assesments of a specific course
 
-deanRouter.route('/verify_all_assessments/specific_course')
+// # done integrated with new smart contracts
+deanRouter.route('/:semester/:course/verify_all_assessments/specific_course')
 .get((req, res, next) => 
 {
-	var query = "select sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where status = 'Approved' and sem.name = ? and c.name = ? "; 
-	var params = [ req.body.semester, req.body.course ];
+	var query = "select sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? and c.name = ? "; 
+	var params = [ req.params.semester, req.params.course ];
 
 	var primise = queryHelper.Execute(query, params);
 	primise.then(function(result){
@@ -260,7 +264,7 @@ deanRouter.route('/verify_all_assessments/specific_course')
 		}
 		// console.log("result 112 : " , result);
 		
-		return recordVerification.VerifyAllAssessments(req, result, "course");
+		return recordVerification.VerifyAllAssessments(req.params, result, "course");
 	})
 	.then((result)=>
 	{

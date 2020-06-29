@@ -3,9 +3,10 @@ const WEB3 = require('web3');
 var encryption = require("./encryption");
 
 
-const MyContract = require('./MyContract.json');
+const CourseContract = require('./Course.json');
 const { log } = require('debug');
 
+console.log("Blockchain Module Attached");
 
 //https://www.dappuniversity.com/articles/web3-js-intro
 
@@ -14,10 +15,10 @@ const web3 = new WEB3('http://127.0.0.1:7545/');
 async function MakeInstance() 
 {
     const id = await web3.eth.net.getId();
-    const deployedNetwork = MyContract.networks[id];
+    const deployedNetwork = CourseContract.networks[id];
 
     const contract = new web3.eth.Contract(
-        MyContract.abi,
+        CourseContract.abi,
         deployedNetwork.address
     );
     console.log("Connected to the Blockchain\n");
@@ -25,30 +26,54 @@ async function MakeInstance()
     return contract;
 }
 
-console.log("Blockchain Module Attached");
 
 
-module.exports.getData = async function (_key)
+module.exports.getHash = async function (_Coursekey, _SectionKey)
 {
     const contract = await MakeInstance();
-    const data = await contract.methods.GetData(_key).call();
+    const data = await contract.methods.GetHash(_Coursekey, _SectionKey).call();
 
-    console.log("JSON.parse(data) : ", JSON.parse(data));
+    // console.log("blockchain.js hash: ", data);
 
-    return JSON.parse(data);
+    return data;
 }
 
 
-module.exports.setData = async function (_key, _hash, _records)
+module.exports.getMarksRecords = async function (_Coursekey, _SectionKey)
 {
-    var records = {  
-        hash: _hash,
-        records: _records               
-    };
-    var data = JSON.stringify(records);
+    const contract = await MakeInstance();
+    const data = await contract.methods.GetMarksRecord(_Coursekey, _SectionKey).call();
 
-    // console.log("string : "+data);
+    // console.log("blockchain.js Marks Records: ", data);
+    if(data != "Record Not Found Against This Key" && data !="Mark's Record Not Found")
+        return JSON.parse(data);
+
+    return data;
+}
+
+
+
+
+
+
+module.exports.setData = async function (_Coursekey, _SectionKey, _hash, _records)
+{
+    // var records = {  
+    //     hash: _hash,
+    //     records: _records               
+    // };
+    // var data = JSON.stringify(records);
+    _records = JSON.stringify(_records);
+
+
     
+    // console.log("_Coursekey : " + _Coursekey);
+    // console.log("_SectionKey : " + _SectionKey);
+    // console.log("_hash : " + _hash);
+    // console.log("_records : " + _records);
+    
+
+
     // var parsed = JSON.parse(string);
 
     // console.log("parsed : ",parsed);
@@ -62,9 +87,9 @@ module.exports.setData = async function (_key, _hash, _records)
     // console.log("addresses : ", addresses);
 
     const contract = await MakeInstance();
-    var result = await contract.methods.SetData(_key, data).send({
+    var result = await contract.methods.InsertNewSectionsData(_Coursekey,_SectionKey , _hash, _records).send({
         from: addresses[1]
-        ,gas: 672197
+        ,gas: 6721970
         //gasPrice: 100
     });
     if(result.transactionHash != "")

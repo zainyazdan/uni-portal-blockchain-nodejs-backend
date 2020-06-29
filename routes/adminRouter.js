@@ -209,7 +209,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 
 // #done
 adminRouter.route('/:admin_Id/courses')
-.get(verifyAdmin, (req,res,next) => {
+.get(verifyAdmin,(req,res,next) => {
 
 	var query = "select * from course";                 
 
@@ -272,11 +272,11 @@ adminRouter.route('/:admin_Id/courses')
 
 // 	 5.	admin / {admin_Id} / courses
 // #done
-adminRouter.route('/:admin_Id/courses/:courseName')
-.get(verifyAdmin, (req,res,next) => {
+adminRouter.route('/:admin_Id/courses/:courseCode')
+.get( verifyAdmin, (req,res,next) => {
 
-	var query = "select * from course where name = ?"; 
-	var primise = queryHelper.Execute(query,req.params.courseName);	
+	var query = "select * from course where code = ?"; 
+	var primise = queryHelper.Execute(query,req.params.courseCode);	
 	primise.then(function(result){
 
 		if(result.length == 0)
@@ -299,10 +299,10 @@ adminRouter.route('/:admin_Id/courses/:courseName')
   	res.statusCode = 403;
     res.end('PUT operation not supported on /courses');
 })
-.put(verifyAdmin,  (req, res, next) => {
+.put( verifyAdmin, (req, res, next) => {
 
-    var query1 = "update course set name = ?,credithours = ?,code = ? where name = ?"; 
-	var params1 = [req.body.name, req.body.credithours, req.body.code, req.params.courseId];  
+    var query1 = "update course set name = ?,credithours = ?,code = ? where code = ?"; 
+	var params1 = [req.body.name, req.body.credithours, req.body.code, req.params.courseCode];  
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
