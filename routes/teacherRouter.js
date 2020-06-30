@@ -1007,7 +1007,7 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesme
 
 teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/verify_assessment')
 .get( (req, res, next) => {
-	
+
 	var query = "select a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = ? and c.name = ? and sec.name = ? and assesment_no = ? and mt.type_name = ?  and a.status = 'Approved' "; 
 	var params = [ req.params.semester, req.params.course, req.params.section, req.params.assesment_no,   req.params.marks_type ];
 

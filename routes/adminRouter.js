@@ -11,6 +11,7 @@ const { sign } = require("jsonwebtoken");
 const { verifyAdmin } = require("../authentication/auth");
 const { secretKey_Admin } = require("../config");
 const { tokenExpireTime } = require("../config");
+const { log } = require('debug');
 
 
 
@@ -23,7 +24,7 @@ adminRouter.route('/:admin_Id/login')
 })
 .post( (req, res, next) => {
 
-	var query = "select u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and u.password=?";
+	var query = "select u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and u.password=? and designition = 'Administrator'";
 	var params = [req.body.username, req.body.password];
 	
 	var primise = queryHelper.Execute(query, params);	
@@ -209,7 +210,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 
 // #done
 adminRouter.route('/:admin_Id/courses')
-.get(verifyAdmin,(req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select * from course";                 
 
@@ -273,10 +274,10 @@ adminRouter.route('/:admin_Id/courses')
 // 	 5.	admin / {admin_Id} / courses
 // #done
 adminRouter.route('/:admin_Id/courses/:courseCode')
-.get( verifyAdmin, (req,res,next) => {
+.get(verifyAdmin,   (req,res,next) => {
 
 	var query = "select * from course where code = ?"; 
-	var primise = queryHelper.Execute(query,req.params.courseCode);	
+	var primise = queryHelper.Execute(query, req.params.courseCode);	
 	primise.then(function(result){
 
 		if(result.length == 0)
@@ -299,7 +300,7 @@ adminRouter.route('/:admin_Id/courses/:courseCode')
   	res.statusCode = 403;
     res.end('PUT operation not supported on /courses');
 })
-.put( verifyAdmin, (req, res, next) => {
+.put(verifyAdmin,   (req, res, next) => {
 
     var query1 = "update course set name = ?,credithours = ?,code = ? where code = ?"; 
 	var params1 = [req.body.name, req.body.credithours, req.body.code, req.params.courseCode];  
@@ -317,11 +318,11 @@ adminRouter.route('/:admin_Id/courses/:courseCode')
 	});
     
 })
-.delete(verifyAdmin, (req, res, next) => {
+.delete(verifyAdmin,  (req, res, next) => {
     
-	var query = "delete from course where name = ?";                 
+	var query = "delete from course where code = ?";                 
 
-	var primise = queryHelper.Execute(query,req.params.courseId);	
+	var primise = queryHelper.Execute(query,req.params.courseCode);	
 	primise.then(function(result){
 
 		res.statusCode = 200;
@@ -719,7 +720,7 @@ adminRouter.route('/:admin_Id/semester/:semesterId')
 
 // #done
 adminRouter.route('/:admin_Id/sections')
-.get(verifyAdmin, (req,res,next) => {
+.get(verifyAdmin,  (req,res,next) => {
 
 	var query = "select sec.name as section, sem.name as semester, c.name as course, c.credithours, c.code as courseCode from section as sec join semester as sem on sec.sid=sem.id join course as c on c.id = sec.cid";                 
 
@@ -735,7 +736,8 @@ adminRouter.route('/:admin_Id/sections')
 	});
 
 })
-.post(verifyAdmin, (req, res, next) => {
+.post(verifyAdmin,  (req, res, next) => {
+
 	var sid;
 	var cid;
 
@@ -901,7 +903,7 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 
 // #done
 adminRouter.route('/:admin_Id/assign_section/teachers')
-.get(verifyAdmin, (req,res,next) => {
+.get( (req,res,next) => {
 
 	var query = "select sem.name as semester,c.name as course,sec.name as section,u.name as Teachername,t.reg_no as reg_no from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join teaches as ts on ts.sid=sec.id join teacher as t on t.id=ts.tid join user as u on u.id = t.uid";
 	var primise = queryHelper.Execute(query);	
@@ -917,30 +919,37 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.post(verifyAdmin, (req, res, next) => {
+.post( (req, res, next) => {
 
 	var sec_id;
 	var tid;
 	
-	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ?";
-	var params1= [req.body.semester, req.body.course];
+	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ? and sec.name = ?";
+	var params1= [req.body.semester, req.body.course, req.body.section];
  
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
+
+		// console.log("result 1 : ", result);
+
+
 		if(result.length == 0)
 		{
 	    	res.end(JSON.stringify({ error: "Semester and course's section not found" }))
 		}
-		var query2 = "select t.id from teacher as t join user as u on t.uid=u.id where t.reg_no = ?";                 
+
+		sec_id = result[0].id;
+
+		               
 	    //console.log("semester id   : "+result[0].id);
 	    //console.log("semester id.. : "+result.id);
 
-	    sec_id = result[0].id;
 
 	    //res.end(JSON.stringify({ status: "Successfully Inserted 1" }))
 
-	    //console.log("semester id.. : "+sid);
-
+		//console.log("semester id.. : "+sid);
+		
+		var query2 = "select t.id from teacher as t join user as u on t.uid=u.id where t.reg_no = ?";  
 	    return queryHelper.Execute(query2, req.body.reg_no);	
 	}).then(function(result){
 
@@ -948,13 +957,14 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 		{
 	    	res.end(JSON.stringify({ error: "Teacher Reg_no not found" }))
 		}
+
 	    //console.log("course id   : "+result[0].id);
 	    //console.log("course id.. : "+result.id);
 	    tid = result[0].id;
 	    //console.log("course id.. : "+cid);
 
-	    console.log("section  id   : " + sec_id);
-	    console.log("teacher  id : " + tid);
+	    // console.log("section  id   : " + sec_id);
+	    // console.log("teacher  id : " + tid);
 
 	    //res.end(JSON.stringify({ status: "Successfully Inserted 2" }))
 
@@ -982,7 +992,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 	var tid;
 	
 	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ?";
-	var params1= [req.body.semester, req.body.course];
+	var params1= [req.body.semester, req.body.course, req.body.section];
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -1101,8 +1111,8 @@ adminRouter.route('/:admin_Id/assign_section/students')
 	var sec_id;
 	var std_id;
 	
-	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ?";
-	var params1= [req.body.semester, req.body.course];
+	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ? and sec.name = ?";
+	var params1= [req.body.semester, req.body.course, req.body.section];
  
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -1160,8 +1170,8 @@ adminRouter.route('/:admin_Id/assign_section/students')
     var sec_id;
 	var std_id;
 	
-	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ?";
-	var params1= [req.body.semester, req.body.course];
+	var query1 = "select sec.id from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.name = ? and sec.name = ?";
+	var params1= [req.body.semester, req.body.course, req.body.section];
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){

@@ -63,20 +63,20 @@ deanRouter.route('/login')
 // Disapprove assesment (completed)
 
 deanRouter.route('/disapprove_assessment')
-.get( (req, res, next) => {
+.get(verifyDean, (req, res, next) => {
 	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "GET operation not supported on ./dean/disapprove_assesment" }));
 })
-.post( (req, res, next) => {
+.post(verifyDean, (req, res, next) => {
 
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "GET operation not supported on ./dean/disapprove_assesment" }));
 
 })
-.put( (req, res, next) => {	
+.put(verifyDean, (req, res, next) => {	
 	
 	var query1 = "select a.status, a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ?  and sem.name = ?  and assesment_no = ? and mt.type_name = ? ";
 	var params1 = [ req.body.section, req.body.course, req.body.semester, req.body.assesment_no,   req.body.marks_type ];
@@ -116,7 +116,7 @@ deanRouter.route('/disapprove_assessment')
 		console.log("ERROR : " + result);
 	});
 })
-.delete( (req, res, next) => {
+.delete(verifyDean, (req, res, next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on ./dean/disapprove_assesment" }));
@@ -128,7 +128,7 @@ deanRouter.route('/disapprove_assessment')
 
 // # done integrated with new smart contracts
 deanRouter.route('/:semester/:course/:section/verify_all_assessments/specific_section')
-.get((req, res, next) => 
+.get(verifyDean, (req, res, next) => 
 {
 	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = 'fall16' and c.name = 'CCN' and sec.name = 'A' and a.status = 'Approved'"; 
 	var params = [ req.params.semester, req.params.course, req.params.section];
@@ -164,17 +164,17 @@ deanRouter.route('/:semester/:course/:section/verify_all_assessments/specific_se
 		console.log("ERROR 22: " + result);
 	});
 })
-.post( (req,res,next) => {
+.post(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
 })
-.put(  (req,res,next) => {	
+.put(verifyDean,  (req,res,next) => {	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
 })
-.delete( (req,res,next) => {
+.delete(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
@@ -188,7 +188,7 @@ deanRouter.route('/:semester/:course/:section/verify_all_assessments/specific_se
 // # done integrated with new smart contracts
 
 deanRouter.route('/:semester/verify_all_assessments/specific_semester')
-.get((req, res, next) => 
+.get(verifyDean, (req, res, next) => 
 {
 	var query = "select c.name as course, sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? "; 
 	var params = [ req.params.semester];
@@ -226,17 +226,17 @@ deanRouter.route('/:semester/verify_all_assessments/specific_semester')
 		console.log("ERROR 22: " + result);
 	});
 })
-.post( (req,res,next) => {
+.post(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
 })
-.put(  (req,res,next) => {	
+.put(verifyDean,  (req,res,next) => {	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
 })
-.delete( (req,res,next) => {
+.delete(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
@@ -248,7 +248,7 @@ deanRouter.route('/:semester/verify_all_assessments/specific_semester')
 
 // # done integrated with new smart contracts
 deanRouter.route('/:semester/:course/verify_all_assessments/specific_course')
-.get((req, res, next) => 
+.get(verifyDean, (req, res, next) => 
 {
 	var query = "select sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? and c.name = ? "; 
 	var params = [ req.params.semester, req.params.course ];
@@ -286,17 +286,17 @@ deanRouter.route('/:semester/:course/verify_all_assessments/specific_course')
 		console.log("ERROR 22: " + result);
 	});
 })
-.post( (req,res,next) => {
+.post(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
 })
-.put(  (req,res,next) => {	
+.put(verifyDean,  (req,res,next) => {	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
 })
-.delete( (req,res,next) => {
+.delete(verifyDean, (req,res,next) => {
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));

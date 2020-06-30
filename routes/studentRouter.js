@@ -8,7 +8,6 @@ const studentRouter = express.Router();
 studentRouter.use(bodyParser.json());
 
 
-
 const { sign } = require("jsonwebtoken")
 const { verifyStudent } = require("../authentication/auth")
 const { secretKey_Student } = require("../config")
@@ -189,11 +188,11 @@ studentRouter.route('/:studentId/:semester/:course/:section/course_outline')
 
 
 // #done
-studentRouter.route('/:studentId/courses')
+studentRouter.route('/:studentId/:semester/courses')
 .get( (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where s.reg_no = ? and sem.name = ? ";
-	var params = [ req.params.studentId ,req.body.semester];
+	var params = [ req.params.studentId ,req.params.semester];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){
