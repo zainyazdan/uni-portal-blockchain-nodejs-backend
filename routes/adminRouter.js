@@ -1276,6 +1276,89 @@ adminRouter.route('/:admin_Id/assign_section/students/:student_Id')
 });
 
 
+// new endpoints
+
+// #done
+adminRouter.route('/:admin_Id/:semester/courses')
+.get(verifyAdmin, (req,res,next) => {
+
+	
+	var query = "select c.name, c.code as course from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ?";
+	var primise = queryHelper.Execute(query, req.params.semester);	
+
+	primise.then(function(result){
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    //res.end(JSON.stringify({ status: "Successfully Updated" }));
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+
+})
+.post(verifyAdmin, (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('POST operation not supported on admin/:admin_Id/:semester/courses');
+
+})
+.put(verifyAdmin,  (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('PUT operation not supported on admin/:admin_Id//:semester/courses');
+})
+.delete(verifyAdmin, (req, res, next) => {
+	res.statusCode = 403;
+    res.end('DELTE operation not supported on admin/:admin_Id//:semester/courses');
+});
+
+
+
+// #done
+adminRouter.route('/:admin_Id/:semester/:course_code')
+.get(verifyAdmin, (req,res,next) => {
+
+	
+	var query = "select sec.name as section	from section as sec join course as c on sec.cid=c.id join semester as sem on sec.sid=sem.id where sem.name = ? and c.code = ?";
+	var params = [req.params.semester, req.params.course_code]
+
+	var primise = queryHelper.Execute(query, params);	
+
+	primise.then(function(result){
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    //res.end(JSON.stringify({ status: "Successfully Updated" }));
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+
+})
+.post(verifyAdmin, (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('POST operation not supported on admin/:admin_Id/:semester/:course_code');
+
+})
+.put(verifyAdmin,  (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('PUT operation not supported on admin/:admin_Id//:semester/:course_code');
+})
+.delete(verifyAdmin, (req, res, next) => {
+	res.statusCode = 403;
+    res.end('DELTE operation not supported on admin/:admin_Id//:semester/:course_code');
+});
+
+
+
+
+
+
+
+
 
 module.exports = adminRouter;
 ////////////////////////////////////////////////////////////////////////////////////

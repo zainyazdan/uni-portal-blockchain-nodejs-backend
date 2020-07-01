@@ -31,7 +31,7 @@ teacherRouter.route('/:teacher_Id/login')
 		res.setHeader('Content-Type', 'application/json');   
 	    return  res.end(JSON.stringify({status:true, message: "Ho gea teacher!!" }))
 })
-.post(verifyTeacher, (req, res, next) => {
+.post( (req, res, next) => {
 
 	var query = "select t.reg_no,u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ?and u.password=?";
 	var params = [req.body.username, req.body.password];
@@ -44,8 +44,6 @@ teacherRouter.route('/:teacher_Id/login')
 		semester: "",
 		reg_no : ""
 	};
-
-
 
 
 	primise.then(function(results){
@@ -785,8 +783,6 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesme
 			return;
 		}
 		
-
-
 		asses_id = result[0].id;
 
 		var query2 = "update assesments set status = 'Approved' where id = ?"; 
@@ -823,8 +819,8 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesme
 		var Sectionkey = req.body.marks_type+":"+req.body.assesment_no;
 
 
-		// console.log("Coursekey : " + Coursekey);
-		// console.log("Sectionkey : " + Sectionkey);
+		console.log("Coursekey : " + Coursekey);
+		console.log("Sectionkey : " + Sectionkey);
 		
 		// console.log("is ka hash : ", JSON.stringify(result));
 		
@@ -832,11 +828,11 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesme
 		// console.log("hash : "+hash);
 
 		
-		return blockchain.setData(Coursekey,Sectionkey , hash ,data);
+		return blockchain.setData(Coursekey, Sectionkey , hash ,data);
 	})
 	.then(function(result){
 
-		console.log("Result Aaya : ", result);
+		// console.log("Result Aaya : ", result);
 		
 		if(result.status == true)
 		{
@@ -1002,12 +998,12 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesme
 // #done with new smart contracts
 
 
-
 // disapprove assesment (completed)
 
 teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/verify_assessment')
 .get( (req, res, next) => {
-
+	// console.log("Req.params : ", req.params);
+	
 	var query = "select a.id from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = ? and c.name = ? and sec.name = ? and assesment_no = ? and mt.type_name = ?  and a.status = 'Approved' "; 
 	var params = [ req.params.semester, req.params.course, req.params.section, req.params.assesment_no,   req.params.marks_type ];
 
@@ -1135,7 +1131,17 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/verify_all_assessmen
 
 
 
-// to verify all assesments of a specific section
+
+
+
+
+
+
+
+
+
+// 				###################################################################
+
 // #done
 teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 .get((req, res, next) => 

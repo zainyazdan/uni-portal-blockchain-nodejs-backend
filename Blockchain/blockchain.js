@@ -30,6 +30,11 @@ async function MakeInstance()
 
 module.exports.getHash = async function (_Coursekey, _SectionKey)
 {
+    
+    // console.log("_Coursekey : " + _Coursekey);
+    // console.log("_SectionKey : " + _SectionKey);
+    
+
     const contract = await MakeInstance();
     const data = await contract.methods.GetHash(_Coursekey, _SectionKey).call();
 
@@ -58,13 +63,14 @@ module.exports.getMarksRecords = async function (_Coursekey, _SectionKey)
 
 module.exports.setData = async function (_Coursekey, _SectionKey, _hash, _records)
 {
+
+
     // var records = {  
     //     hash: _hash,
     //     records: _records               
     // };
     // var data = JSON.stringify(records);
     _records = JSON.stringify(_records);
-
 
     
     // console.log("_Coursekey : " + _Coursekey);
