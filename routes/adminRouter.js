@@ -1,5 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const passwordHash = require('../passwordHash');
+
 var db = require('../db');
 var queryHelper = require('../query');
 var mysql = require('mysql');
@@ -8,9 +10,13 @@ adminRouter.use(bodyParser.json());
 
 
 const { sign } = require("jsonwebtoken");
-const { verifyAdmin } = require("../authentication/auth");
 const { secretKey_Admin } = require("../config");
 const { tokenExpireTime } = require("../config");
+
+
+
+const { verifyAdmin } = require("../authentication/auth");
+
 const { log } = require('debug');
 
 
@@ -24,30 +30,61 @@ adminRouter.route('/:admin_Id/login')
 })
 .post( (req, res, next) => {
 
-	var query = "select u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and u.password=? and designition = 'Administrator'";
+	var query = "select u.password ,u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and designition = 'Administrator'";
 	var params = [req.body.username, req.body.password];
 	
-	var primise = queryHelper.Execute(query, params);	
+	var tokenSigningData = {};
+
+	var primise = queryHelper.Execute(query, params);
 
 	primise.then(function(results){
+
+		// console.log("results : ", results);
 
 		if(results.length == 0)
 		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
+			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password 1" }));
+			return;
+		}
+		// console.log("asd2");
+
+		tokenSigningData.user = 'admin';
+		tokenSigningData.name = results[0].name;
+		tokenSigningData.username = results[0].username;
+
+
+		// console.log("asd3");
+		
+		return passwordHash.ComparePasswords(results[0].password, req.body.password);
+	})
+	.then((result)=>{
+
+		console.log("result : ", result);
+		
+		if(result == false)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password 2" }))
+			return;
 		}
 
-		const jsontoken = sign({user: 'admin', result :results }, secretKey_Admin ,{expiresIn: tokenExpireTime});
+
+		const jsontoken = sign(tokenSigningData , secretKey_Admin ,{expiresIn: tokenExpireTime});
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
 	    return  res.end(JSON.stringify({status:true, message: "Successfully Logged-in",token : jsontoken }))
-
-	}).catch(function(result){
+	})
+	.catch(function(result){
 		console.log("ERROR : " + result);
 	});
+
 });
+
+
 
 
 //adminRouter.use(bodyParser.urlencoded({ extended: true }));
@@ -85,12 +122,21 @@ adminRouter.route('/:admin_Id/students')
 		res.send(result);	
 	});
 })
-.post(verifyAdmin, (req, res, next) => {
-	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
-	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password];
+.post( (req, res, next) => {
 
-	var primise = queryHelper.Execute(query1,params1);	
-	primise.then(function(result){
+
+	passwordHash.ComputeSaltHash(req.body.password)
+	.then((saltHashPassword)=>{
+
+		// console.log("saltHashPassword : " , saltHashPassword);
+
+		var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
+		var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, saltHashPassword];
+	
+
+		return queryHelper.Execute(query1,params1);	
+	})
+	.then(function(result){
 		var query2 = "insert into student(reg_no,uid) values(?,?)";
 		var param2 = [req.body.reg_no,result.insertId];
 
@@ -153,11 +199,12 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 	res.statusCode = 403;
 	res.end('post operation not supported on /courses');
 })
-.put( verifyAdmin, (req, res, next) => { 
+.put(  (req, res, next) => { 
 // update student set reg_no='l1f16bscs0157'where uid=6;
 
 	var query1 = "update student set reg_no = ? where reg_no = ?"; 
 	var params1 = [req.body.reg_no,req.params.student_Id];
+	var uid;
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -165,12 +212,17 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 		var queryToGetid = "select s.uid from user as u join student as s on u.id=s.uid where s.reg_no=?"; 
 		
 		return queryHelper.Execute(queryToGetid,req.body.reg_no);	
-	}).then(function(result){
-		var uid = result[0].uid;
+	})
+	.then((result)=>{
+		uid = result[0].uid;	
+
+		return passwordHash.ComputeSaltHash(req.body.password)
+	})		
+	.then(function(saltHashPassword){
 		//console.log("user id : "+result[0].uid);
 	
 		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=? ,username=?, password=?  where id = ?"; 
-		var params2= [req.body.name,req.body.cnic,req.body.dob,req.body.phone_no,req.body.address,req.body.father_name,req.body.email,req.body.username,req.body.password ,uid];
+		var params2= [req.body.name,req.body.cnic,req.body.dob,req.body.phone_no,req.body.address,req.body.father_name,req.body.email,req.body.username,saltHashPassword ,uid];
 		//console.log("params2 : "+params2);
 	
 		return queryHelper.Execute(query2,params2);
@@ -286,7 +338,8 @@ adminRouter.route('/:admin_Id/courses/:courseCode')
 			res.setHeader('Content-Type', 'application/json');   
 	   		res.end(JSON.stringify({ status: "No Record Found" }));	
 		}
-		else{
+		else
+		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
 		    res.end(JSON.stringify(result));	
@@ -352,13 +405,17 @@ adminRouter.route('/:admin_Id/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.post(verifyAdmin, (req, res, next) => {
+.post(verifyAdmin,  (req, res, next) => {
 
-	var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
-	var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password];
+	passwordHash.ComputeSaltHash(req.body.password)
+	.then((saltHashPassword)=>{
 
-	var primise = queryHelper.Execute(query1,params1);	
-	primise.then(function(result){
+		var query1 = "insert into user(name, cnic, dob, phone_no, address, father_name, email, username, password) values(?,?,?,?,?,?,?,?,?)";
+		var params1 = [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, saltHashPassword];
+	
+		return queryHelper.Execute(query1,params1);
+	})
+	.then(function(result){
 		var query2 = "insert into teacher(reg_no,qualification,uid) values(?,?,?)";
 		var param2 = [req.body.reg_no,req.body.qualification,result.insertId];
 
@@ -428,6 +485,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 
     var query1 = "update teacher set reg_no = ?,qualification = ? where reg_no = ?"; 
 	var params1 = [req.body.reg_no, req.body.qualification, req.params.teacher_Id];
+	var uid;
 
 	var primise = queryHelper.Execute(query1,params1);	
 	primise.then(function(result){
@@ -436,14 +494,18 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 		
 		return queryHelper.Execute(queryToGetid,req.body.reg_no);	
 	}).then(function(result){
-		var uid = result[0].uid;
+		uid = result[0].uid;
+
 		//console.log("user id : "+result[0].uid);
-	
+		return passwordHash.ComputeSaltHash(req.body.password);	
+	})
+	.then((saltHashPassword)=>{
 		var query2 = "update user set name =?,cnic =?,dob =?,phone_no=?,address=?,father_name=?,email=?,username=?,password=? where id = ?"; 
-		var params2= [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, req.body.password,  uid];
-		//console.log("params2 : "+params2);
+		var params2= [req.body.name, req.body.cnic, req.body.dob, req.body.phone_no, req.body.address, req.body.father_name, req.body.email, req.body.username, saltHashPassword,  uid];
+	
 		return queryHelper.Execute(query2,params2);
-	}).then(function(result){
+	})	
+	.then(function(result){
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');

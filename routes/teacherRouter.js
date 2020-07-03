@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 var db = require('../db');
 var mysql = require('mysql');
 var queryHelper = require('../query');
+const passwordHash = require('../passwordHash');
 
 var blockchain = require("../Blockchain/blockchain");
 var recordVerification = require("../Blockchain/recordVerification");
@@ -33,7 +34,7 @@ teacherRouter.route('/:teacher_Id/login')
 })
 .post( (req, res, next) => {
 
-	var query = "select t.reg_no,u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ?and u.password=?";
+	var query = "select u.password, t.reg_no,u.name,u.username from user as u join teacher as t on u.id=t.uid where u.username = ? ";
 	var params = [req.body.username, req.body.password];
 	
 
@@ -45,6 +46,9 @@ teacherRouter.route('/:teacher_Id/login')
 		reg_no : ""
 	};
 
+	
+	var tokenSigningData = {};
+	var SaltResponse;
 
 	primise.then(function(results){
 
@@ -52,33 +56,62 @@ teacherRouter.route('/:teacher_Id/login')
 		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
+			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password 1" }))
+			SaltResponse = false;
+			return;
 		}
+	
 
-		const jsontoken = sign({user: 'teacher', result :results }, secretKey_Teacher ,{expiresIn: tokenExpireTime});
+		// console.log("Password : " + results[0].password);
 
-		data.token = jsontoken;
+		tokenSigningData.user = 'teacher';
+		tokenSigningData.name = results[0].name;
+		tokenSigningData.username = results[0].username;
+
+	
+
 		data.reg_no = results[0].reg_no;
-
-		var query2 = "select name from semester where status = 'current'";
-		return queryHelper.Execute(query2);	
+		
+		return passwordHash.ComparePasswords(results[0].password, req.body.password);
 	})
-	.then(function(results){
+	.then( (results) =>{
+		SaltResponse = results;
 
-		if(results.length == 0)
+		if(results == false)
 		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password 2" }))
+			return;
 		}
 
-		data.message = "Successfully Logged-in";
-		data.semester = results[0].name;
+		var query2 = "select name from semester where status = 'current'";
+		return queryHelper.Execute(query2);
+	})
+	.then(function(results){
 
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
+		if(SaltResponse == true)
+		{
 
-		return  res.end(JSON.stringify({status:true, data }));
+			if(results.length == 0)
+			{
+				res.statusCode = 200;
+				res.setHeader('Content-Type', 'application/json');   
+				res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+			}
+
+			const jsontoken = sign(tokenSigningData , secretKey_Teacher ,{expiresIn: tokenExpireTime});
+			data.token = jsontoken;
+			
+
+			data.message = "Successfully Logged-in";
+			data.semester = results[0].name;
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+
+			return  res.end(JSON.stringify({status:true, data }));
+		}
 	})
 	.catch(function(result){
 		console.log("ERROR : " + result);
@@ -190,7 +223,7 @@ teacherRouter.route('/:teacherId/:semester/:course_code/:section/announcements')
 teacherRouter.route('/:teacherId/:semester/courses')
 .get(verifyTeacher, (req,res,next) => {
 
-	var query = "select c.name as course,sec.name as section from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name= ?;";
+	var query = "select c.name as course, c.code as course_code, sec.name as section from teacher as t join user as u on u.id=t.uid join teaches as ts on ts.tid=t.id join section as sec on sec.id=ts.sid join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where t.reg_no = ? and sem.name= ?;";
 	var params = [ req.params.teacherId ,req.params.semester];
 
 	var primise = queryHelper.Execute(query,params);	
@@ -455,11 +488,11 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/course_outline')
 // upload marks of a specific student  (completed)
 
 // #done
-teacherRouter.route('/:teacherId/:semester/:course/:section/:marks_type/:assesment_no/upload_marks/students/:student_id')
+teacherRouter.route('/:teacherId/:semester/:course_code/:section/:marks_type/:assesment_no/upload_marks/students/:student_id')
 .get(verifyTeacher, (req,res,next) => {
 
-	var query = "select a.status, std.reg_no, u.name, a.date, a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.name = ? and sem.name = ? and assesment_no = ? and mt.type_name = ? and std.reg_no = ?";
-	var params = [ req.params.section, req.params.course, req.params.semester, req.params.assesment_no, req.params.marks_type , req.params.student_id];
+	var query = "select a.status, std.reg_no, u.name, a.date, a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id	where sec.name = ? and c.code = ? and sem.name = ? and assesment_no = ? and mt.type_name = ? and std.reg_no = ?";
+	var params = [ req.params.section, req.params.course_code, req.params.semester, req.params.assesment_no, req.params.marks_type , req.params.student_id];
 
 	var primise = queryHelper.Execute(query,params);	
 	primise.then(function(result){

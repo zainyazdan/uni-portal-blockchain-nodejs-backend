@@ -1,5 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const passwordHash = require('../passwordHash');
+
 var db = require('../db');
 var mysql = require('mysql');
 var queryHelper = require('../query');
@@ -8,11 +10,13 @@ const studentRouter = express.Router();
 studentRouter.use(bodyParser.json());
 
 
-const { sign } = require("jsonwebtoken")
 const { verifyStudent } = require("../authentication/auth")
-const { secretKey_Student } = require("../config")
-const { tokenExpireTime } = require("../config");
 const { log } = require('debug');
+
+const { sign } = require("jsonwebtoken");
+const { secretKey_Student } = require("../config");
+const { tokenExpireTime } = require("../config");
+
 
 
 // #done
@@ -26,7 +30,7 @@ studentRouter.route('/:admin_Id/login')
 })
 .post((req, res, next) => {
 	
-	var query = "select s.reg_no, u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ? and u.password = ?";
+	var query = "select u.password, s.reg_no, u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ?";
 	var params = [req.body.username, req.body.password];
 	
 	var primise = queryHelper.Execute(query, params);	
@@ -36,7 +40,9 @@ studentRouter.route('/:admin_Id/login')
 		semester: "",
 		reg_no : ""
 	};
-
+	
+	var tokenSigningData = {};
+	var SaltResponse;
 
 	primise.then(function(results){
 
@@ -47,31 +53,57 @@ studentRouter.route('/:admin_Id/login')
 		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
 		}
 
-		const jsontoken = sign({user: 'student', result :results }, secretKey_Student ,{expiresIn: tokenExpireTime});
 
-		data.token = jsontoken;
+		// console.log("Password : " + results[0].password);
+
+		tokenSigningData.user = 'student';
+		tokenSigningData.name = results[0].name;
+		tokenSigningData.username = results[0].username;
+
+
 		data.reg_no = results[0].reg_no;
-
-		var query2 = "select name from semester where status = 'current'";
-		return queryHelper.Execute(query2);	
-	})
-	.then(function(results){
 		
-		if(results.length == 0)
+		return passwordHash.ComparePasswords(results[0].password, req.body.password);
+	})
+	.then( (results) =>{
+
+		SaltResponse = results;
+
+		if(results == false)
 		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
 		}
 
-		data.message = "Successfully Logged-in";
-		data.semester = results[0].name;
-
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
-
-		return  res.end(JSON.stringify({status:true, data }));
+		var query2 = "select name from semester where status = 'current'";
+		return queryHelper.Execute(query2);
+	})
+	.then(function(results){
 		
+		if(SaltResponse == true)
+		{
+
+			if(results.length == 0)
+			{
+				res.statusCode = 200;
+				res.setHeader('Content-Type', 'application/json');   
+				res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+			}
+			
+
+			const jsontoken = sign(tokenSigningData , secretKey_Student ,{expiresIn: tokenExpireTime});
+			data.token = jsontoken;
+			
+
+			data.message = "Successfully Logged-in";
+			data.semester = results[0].name;
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+
+			return  res.end(JSON.stringify({status:true, data }));
+		}
 
 
 	})
@@ -79,6 +111,74 @@ studentRouter.route('/:admin_Id/login')
 		console.log("ERROR : " + result);
 	});
 });
+
+
+
+
+// // #done
+// studentRouter.route('/:admin_Id/login')
+// .get(verifyStudent, (req,res,next) => {
+
+// 	console.log("Request : ",req );
+// 	res.statusCode = 200;
+// 	res.setHeader('Content-Type', 'application/json');   
+// 	return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+// })
+// .post((req, res, next) => {
+	
+// 	var query = "select s.reg_no, u.name,u.username from user as u join student as s on u.id=s.uid where u.username = ? and u.password = ?";
+// 	var params = [req.body.username, req.body.password];
+	
+// 	var primise = queryHelper.Execute(query, params);	
+// 	var data = {
+// 		message: "",
+// 		token : "",
+// 		semester: "",
+// 		reg_no : ""
+// 	};
+
+
+// 	primise.then(function(results){
+
+// 		if(results.length == 0)
+// 		{
+// 			res.statusCode = 200;
+// 			res.setHeader('Content-Type', 'application/json');   
+// 		    res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }))
+// 		}
+
+// 		const jsontoken = sign({user: 'student', result :results }, secretKey_Student ,{expiresIn: tokenExpireTime});
+
+// 		data.token = jsontoken;
+// 		data.reg_no = results[0].reg_no;
+
+// 		var query2 = "select name from semester where status = 'current'";
+// 		return queryHelper.Execute(query2);	
+// 	})
+// 	.then(function(results){
+		
+// 		if(results.length == 0)
+// 		{
+// 			res.statusCode = 200;
+// 			res.setHeader('Content-Type', 'application/json');   
+// 		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+// 		}
+
+// 		data.message = "Successfully Logged-in";
+// 		data.semester = results[0].name;
+
+// 		res.statusCode = 200;
+// 		res.setHeader('Content-Type', 'application/json');   
+
+// 		return  res.end(JSON.stringify({status:true, data }));
+		
+
+
+// 	})
+// 	.catch(function(result){
+// 		console.log("ERROR : " + result);
+// 	});
+// });
 
 
 // #done

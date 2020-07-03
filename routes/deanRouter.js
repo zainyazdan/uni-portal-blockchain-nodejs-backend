@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 var db = require('../db');
 var mysql = require('mysql');
 var queryHelper = require('../query');
+const passwordHash = require('../passwordHash');
 
 var blockchain = require("../Blockchain/blockchain");
 var recordVerification = require("../Blockchain/recordVerification");
@@ -22,41 +23,66 @@ const { json } = require('body-parser');
 
 
 
-deanRouter.route('/login')
-.get(verifyDean, (req,res,next) => {		// For testing pupposes
+deanRouter.route('/:admin_Id/login')
+.get(verifyDean, (req, res, next) => {
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, message: "Ho gea Dean!!" }))
+	    return  res.end(JSON.stringify({status:true, message: "Ho gea !!" }))
 })
-.post((req, res, next) => {
+.post( (req, res, next) => {
 
-	var query = "select u.name,u.username from user as u join admin as a on u.id = a.uid where a.designition = 'dean' and u.username = ? and u.password= ?";	
+	var query = "select u.password ,u.name,u.username from user as u join admin as a on u.id=a.uid where u.username = ? and designition = 'Dean'";
 	var params = [req.body.username, req.body.password];
+	
+	var tokenSigningData = {};
 
-	// console.log("req.body.username : " + req.body.username);
-	// console.log("req.body.password : " + req.body.password);
-	 
-	var primise = queryHelper.Execute(query, params);	
-	primise.then(function(results)
-	{
+	var primise = queryHelper.Execute(query, params);
+
+	primise.then(function(results){
+
+		// console.log("results : ", results);
+
 		if(results.length == 0)
 		{
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json');   
-			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password !!" }));
+			res.end(JSON.stringify({status:false, message: "Invalid Usename or Password" }));
 			return;
 		}
+		// console.log("asd2");
 
-		const jsontoken = sign({user: 'dean', result :results }, secretKey_dean ,{expiresIn: tokenExpireTime});
+		tokenSigningData.user = 'Dean';
+		tokenSigningData.name = results[0].name;
+		tokenSigningData.username = results[0].username;
+
+
+		// console.log("asd3");
+		
+		return passwordHash.ComparePasswords(results[0].password, req.body.password);
+	})
+	.then((result)=>{
+
+		console.log("result : ", result);
+		
+		if(result == false)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+		    res.end(JSON.stringify({status:false, message: "Current semester not found" }))
+		}
+
+		const jsontoken = sign(tokenSigningData , secretKey_dean ,{expiresIn: tokenExpireTime});
+
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, meassage: "Successfully Logged-in",token : jsontoken }))
-
-	}).catch(function(result){
+	    return  res.end(JSON.stringify({status:true, message: "Successfully Logged-in",token : jsontoken }))
+	})
+	.catch(function(result){
 		console.log("ERROR : " + result);
 	});
+
 });
 
 
