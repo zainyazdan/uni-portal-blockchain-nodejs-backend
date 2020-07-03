@@ -289,7 +289,7 @@ studentRouter.route('/:studentId/:semester/:course/:section/course_outline')
 
 // #done
 studentRouter.route('/:studentId/:semester/courses')
-.get( (req,res,next) => {
+.get(verifyStudent, (req,res,next) => {
 
 	var query = "select c.name as course,sec.name as section from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid where s.reg_no = ? and sem.name = ? ";
 	var params = [ req.params.studentId ,req.params.semester];
@@ -362,50 +362,122 @@ studentRouter.route('/:studentId/:semester/:course/:section/gradebook')
 
 
 
-studentRouter.route('/:studentId/test')
+// studentRouter.route('/:studentId/test')
+// .get( (req,res,next) => {
+
+// 	var query = "select * from student as s join user as u on s.uid = u.id where s.reg_no = ? ";
+// 	var primise = queryHelper.Execute(query,req.params.studentId);	
+// 	primise.then(function(result){
+
+// 		res.statusCode = 200;
+// 		res.setHeader('Content-Type', 'application/json');
+// 		res.end(JSON.stringify(result));
+		
+// 	}).catch(function(result){
+// 		console.log("ERROR : " + result);
+// 		res.send(result);	
+// 	});
+// })
+// .post( (req, res, next) => {
+//     res.statusCode = 200;
+// 	//res.send(result);	
+// 	console.log("username: " + req.body.username);
+// 	console.log("password : " + JSON.stringify(req.body));
+
+
+//     res.end('POST operation not supported on /:studentId/personal_info');
+// })
+// .put(verifyStudent,  (req, res, next) => {
+//     res.statusCode = 403;
+//     res.end('PUT operation not supported on /:studentId/personal_info');
+// })
+// .delete(verifyStudent, (req, res, next) => {
+//     res.statusCode = 403;
+//     res.end('DELETE operation not supported on /:studentId/personal_info');
+// });
+
+
+
+
+
+// studentRouter.route('/:test')
+// .get((req,res,next) => {
+
+// 	var query = "select * from student as s join user as u on s.uid = u.id";
+// 	var primise = queryHelper.Execute(query);	
+// 	primise.then(function(result){
+
+// 		res.statusCode = 200;
+// 		res.setHeader('Content-Type', 'application/json');
+// 	    res.end(JSON.stringify(result));
+// 	}).catch(function(result){
+// 		console.log("ERROR : " + result);
+// 		res.send(result);	
+// 	});
+// })
+// .post(verifyStudent, (req, res, next) => {
+//    res.statusCode = 403;
+//     res.end('POST operation not supported on /:studentId/personal_info');
+// })
+// .put(verifyStudent,  (req, res, next) => {
+//     res.statusCode = 403;
+//     res.end('PUT operation not supported on /:studentId/personal_info');
+// })
+// .delete(verifyStudent, (req, res, next) => {
+//     res.statusCode = 403;
+//     res.end('DELETE operation not supported on /:studentId/personal_info');
+// });
+
+
+
+// studentRouter.route('/:admin_Id/test2')
+// .get( (req,res,next) => {
+
+// 		req.body.name = "ZAIN";
+
+// 		console.log("req : ", req.body);
+		
+// 		res.statusCode = 200;
+// 		res.setHeader('Content-Type', 'application/json');   
+// 	    return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+// })
+// .patch( (req, res, next) => {
+
+// 	console.log("req : ", req.body);
+	
+// 	res.statusCode = 200;
+// 	res.setHeader('Content-Type', 'application/json');   
+// 	return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
+// })
+// .post((req, res, next) => {
+
+// 	console.log("req : ", req.body);
+
+
+// 	res.statusCode = 200;
+// 	res.setHeader('Content-Type', 'application/json');   
+// 	return  res.end(JSON.stringify({status:true, Lname: req.body.lastName, Fname :  req.body.firstName}))
+// });
+
+
+
+
+// #done
+studentRouter.route('/:studentId/transcript')
 .get( (req,res,next) => {
 
-	var query = "select * from student as s join user as u on s.uid = u.id where s.reg_no = ? ";
-	var primise = queryHelper.Execute(query,req.params.studentId);	
+	var query = "select sem.name as semester, c.name as course, c.credithours , ei.grade from student as std join enrolled_in as ei on std.id = ei . std_id	join section as sec on sec.id = ei.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid	where std.reg_no = ?	and ei.grade is not NULL and sec.status = 'closed'	order by sem.name ";
+
+	var primise = queryHelper.Execute(query, req.params.studentId);	
+
 	primise.then(function(result){
 
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');
-		res.end(JSON.stringify(result));
-		
-	}).catch(function(result){
-		console.log("ERROR : " + result);
-		res.send(result);	
-	});
-})
-.post( (req, res, next) => {
-    res.statusCode = 200;
-	//res.send(result);	
-	console.log("username: " + req.body.username);
-	console.log("password : " + JSON.stringify(req.body));
-
-
-    res.end('POST operation not supported on /:studentId/personal_info');
-})
-.put(verifyStudent,  (req, res, next) => {
-    res.statusCode = 403;
-    res.end('PUT operation not supported on /:studentId/personal_info');
-})
-.delete(verifyStudent, (req, res, next) => {
-    res.statusCode = 403;
-    res.end('DELETE operation not supported on /:studentId/personal_info');
-});
-
-
-
-
-
-studentRouter.route('/:test')
-.get((req,res,next) => {
-
-	var query = "select * from student as s join user as u on s.uid = u.id";
-	var primise = queryHelper.Execute(query);	
-	primise.then(function(result){
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Transcript not found" }));
+			return;
+		}
 
 		res.statusCode = 200;
 		res.setHeader('Content-Type', 'application/json');
@@ -427,41 +499,6 @@ studentRouter.route('/:test')
     res.statusCode = 403;
     res.end('DELETE operation not supported on /:studentId/personal_info');
 });
-
-
-
-studentRouter.route('/:admin_Id/test2')
-.get( (req,res,next) => {
-
-		req.body.name = "ZAIN";
-
-		console.log("req : ", req.body);
-		
-		res.statusCode = 200;
-		res.setHeader('Content-Type', 'application/json');   
-	    return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
-})
-.patch( (req, res, next) => {
-
-	console.log("req : ", req.body);
-	
-	res.statusCode = 200;
-	res.setHeader('Content-Type', 'application/json');   
-	return  res.end(JSON.stringify({status:true, message: "Ho gea student!!" }))
-})
-.post((req, res, next) => {
-
-	console.log("req : ", req.body);
-
-
-	res.statusCode = 200;
-	res.setHeader('Content-Type', 'application/json');   
-	return  res.end(JSON.stringify({status:true, Lname: req.body.lastName, Fname :  req.body.firstName}))
-});
-
-
-
-
 
 
 

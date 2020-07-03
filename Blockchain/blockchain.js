@@ -105,5 +105,76 @@ module.exports.setData = async function (_Coursekey, _SectionKey, _hash, _record
 }
 
 
+// #################################################################
 
 
+
+module.exports.getGradesHash = async function (_Coursekey, _SectionKey)
+{
+    
+    // console.log("_Coursekey : " + _Coursekey);
+    // console.log("_SectionKey : " + _SectionKey);
+    
+
+    const contract = await MakeInstance();
+    const data = await contract.methods.GetGradesHash(_Coursekey, _SectionKey).call();
+
+    // console.log("blockchain.js hash: ", data);
+
+    return data;
+}
+
+
+module.exports.getGradesRecords = async function (_Coursekey, _SectionKey)
+{
+    const contract = await MakeInstance();
+    const data = await contract.methods.GetGradesRecord(_Coursekey, _SectionKey).call();
+
+    // console.log("blockchain.js Marks Records: ", data);
+    if(data != "Record Not Found Against This Key" && data != "Grades Record Not Found")
+        return JSON.parse(data);
+
+    return data;
+}
+
+
+module.exports.setGradesData = async function (_Coursekey, _SectionKey, _hash, _records)
+{
+    // var records = {  
+    //     hash: _hash,
+    //     records: _records               
+    // };
+    // var data = JSON.stringify(records);
+    _records = JSON.stringify(_records);
+
+    
+    // console.log("_Coursekey : " + _Coursekey);
+    // console.log("_SectionKey : " + _SectionKey);
+    // console.log("_hash : " + _hash);
+    // console.log("_records : " + _records);
+    
+
+
+    // var parsed = JSON.parse(string);
+
+    // console.log("parsed : ",parsed);
+    // console.log("parsed.records.marks[1] : " + parsed.records.marks[1]);
+   
+  
+
+    // console.log("\nStoring string on bc : " + JSON.stringify(data));
+
+    const addresses = await web3.eth.getAccounts();
+    // console.log("addresses : ", addresses);
+
+    const contract = await MakeInstance();
+    var result = await contract.methods.InsertNewSectionsGrades(_Coursekey,_SectionKey , _hash, _records).send({
+        from: addresses[1]
+        ,gas: 6721970
+        //gasPrice: 100
+    });
+    if(result.transactionHash != "")
+        return {status:true};
+    else
+        return {status:false};
+}

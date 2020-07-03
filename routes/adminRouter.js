@@ -122,7 +122,7 @@ adminRouter.route('/:admin_Id/students')
 		res.send(result);	
 	});
 })
-.post( (req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 
 	passwordHash.ComputeSaltHash(req.body.password)
@@ -199,7 +199,7 @@ adminRouter.route('/:admin_Id/students/:student_Id')
 	res.statusCode = 403;
 	res.end('post operation not supported on /courses');
 })
-.put(  (req, res, next) => { 
+.put( verifyAdmin, (req, res, next) => { 
 // update student set reg_no='l1f16bscs0157'where uid=6;
 
 	var query1 = "update student set reg_no = ? where reg_no = ?"; 
@@ -481,7 +481,7 @@ adminRouter.route('/:admin_Id/teachers/:teacher_Id')
 	res.statusCode = 403;
 	res.end('post operation not supported on /teachers');
 })
-.put(  (req, res, next) => {
+.put(verifyAdmin,  (req, res, next) => {
 
     var query1 = "update teacher set reg_no = ?,qualification = ? where reg_no = ?"; 
 	var params1 = [req.body.reg_no, req.body.qualification, req.params.teacher_Id];
@@ -965,7 +965,7 @@ adminRouter.route('/:admin_Id/sections/:sectionId')
 
 // #done
 adminRouter.route('/:admin_Id/assign_section/teachers')
-.get( (req,res,next) => {
+.get(verifyAdmin, (req,res,next) => {
 
 	var query = "select sem.name as semester,c.name as course,sec.name as section,u.name as Teachername,t.reg_no as reg_no from section as sec join course as c on sec.cid=c.id join semester as sem on sem.id=sec.sid join teaches as ts on ts.sid=sec.id join teacher as t on t.id=ts.tid join user as u on u.id = t.uid";
 	var primise = queryHelper.Execute(query);	
@@ -981,7 +981,7 @@ adminRouter.route('/:admin_Id/assign_section/teachers')
 		console.log("ERROR : " + result);
 	});
 })
-.post( (req, res, next) => {
+.post(verifyAdmin, (req, res, next) => {
 
 	var sec_id;
 	var tid;

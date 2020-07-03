@@ -119,21 +119,6 @@ teacherRouter.route('/:teacher_Id/login')
 });
 
 
-async function  getCurrentSemester()
-{
-	var query = "select name from semester where status = 'current'";
-	var result = await	queryHelper.Execute(query, params);	
-
-	return result[0].name;
-}
-
-
-
-
-
-
-
-
 
 // #done
 teacherRouter.route('/:teacherId/personal_info')
@@ -1236,9 +1221,9 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 				return 'A-'
 			else if(x.persentage >= 80 && x.persentage <= 85)
 				return 'B+'
-			else if(x.persentage >= 90 && x.persentage <= 100)
+			else if(x.persentage >= 75 && x.persentage <= 79)
 				return 'B'
-			else if(x.persentage >= 90 && x.persentage <= 100)
+			else if(x.persentage >= 65 && x.persentage <= 74)
 				return 'C'
 		});
 		//console.log("Data : ", data);
@@ -1254,7 +1239,6 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 
 })
 .post(verifyTeacher, (req,res,next) => {
-
 
 	var query1 = "select sec.id, sec.status from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where sem.name = ? and c.name = ?	and sec.name = ?	having count(a.id) = 	(	select count(a.id)	from assesments as a join marks_type as mt on mt.id = a.mt_id	join section as sec on sec.id = a.sec_id	join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid	where a.status = 'Approved' and sem.name = ? and c.name = ?	and sec.name = ? )";
 	var params1 = [ req.body.semester, req.body.course, req.body.section, req.body.semester, req.body.course, req.body.section];
@@ -1317,8 +1301,6 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 		});
 		console.log("Data : ", data);
 
-
-
 		var query2 = "update enrolled_in set grade = ? where sec_id = ? and std_id = ?";				
 		var promiseArray = [];
 
@@ -1337,6 +1319,10 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 			
 			return queryHelper.Execute(query2, params2);
 		})
+
+
+
+
 		.then((result) =>{
 
 			res.statusCode = 200;
@@ -1355,7 +1341,7 @@ teacherRouter.route('/:teacherId/:semester/:course/:section/calculate_grades')
 	});
 	
 })
-.put(  (req,res,next) => {	
+.put(verifyTeacher,  (req,res,next) => {	
 	res.statusCode = 403;
 	res.setHeader('Content-Type', 'application/json');   
 	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
@@ -1402,6 +1388,165 @@ teacherRouter.route('/:teacher_id/assessment_types')
 
 });
 
+
+// #done
+teacherRouter.route('/:teacher_id/:semester/:course_code/:section/students')
+.get(verifyTeacher, (req,res,next) => {
+
+	var query = "select u.name, std.reg_no from student as std join enrolled_in as ei on ei.std_id = std.id join section as sec on sec.id = ei.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid	where sem.name = ? and c.code = ? and sec.name = ? order by std.reg_no";                 
+	var params = [req.params.semester, req.params.course_code, req.params.section ];
+
+
+	var primise = queryHelper.Execute(query, params);	
+	primise.then(function(result){
+
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+
+})
+.post(verifyTeacher, (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('POST operation not supported on /sections');
+})
+.put(verifyTeacher,  (req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /sections');
+})
+.delete(verifyTeacher, (req, res, next) => {
+    
+	res.statusCode = 403;
+    res.end('Delete operation not supported on /sections');
+
+});
+
+
+// #done
+teacherRouter.route('/:teacher_id/:semester/:course_code/:section/assessments')
+.get(verifyTeacher, (req,res,next) => {
+
+	var query = "select mt.type_name, a.assesment_no, a.total_marks, a.status, a.date, a.time from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id where sem.name = ?  and c.code = ? and sec.name = ? ";
+	var params = [req.params.semester, req.params.course_code, req.params.section ];
+
+
+	var primise = queryHelper.Execute(query, params);	
+	primise.then(function(result){
+
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Assesment Records not found " }));
+			return;
+		}
+
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'application/json');   
+	    res.end(JSON.stringify(result));
+
+	}).catch(function(result){
+		console.log("ERROR : " + result);
+	});
+
+})
+.post(verifyTeacher, (req, res, next) => {
+
+	res.statusCode = 403;
+    res.end('POST operation not supported on /sections');
+})
+.put(verifyTeacher,  (req, res, next) => {
+    res.statusCode = 403;
+    res.end('PUT operation not supported on /sections');
+})
+.delete(verifyTeacher, (req, res, next) => {
+    
+	res.statusCode = 403;
+    res.end('Delete operation not supported on /sections');
+});
+
+
+
+// #done
+teacherRouter.route('/:teacherId/store_grades_on_blockchain')
+.get(verifyTeacher, (req, res, next) => 
+{	
+
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "/:teacherId/store_grades_on_blockchain" }));
+
+})
+.post( (req,res,next) => {
+
+	var query1 = "select std.reg_no , ei.grade from student as std join enrolled_in as ei on std.id = ei . std_id join section as sec on sec.id = ei.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid where ei.grade is not NULL and sec.status = 'closed' and sem.name = ? and c.name = ? and sec.name= ? order by std.reg_no";
+	var params1 = [ req.body.semester, req.body.course, req.body.section ];
+
+	var primise = queryHelper.Execute(query1, params1);
+	primise.then(function(result)
+	{
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Sections record not found" }));
+			return;
+		}
+		let data = {
+			reg_no:[],
+			grade:[]
+		};
+
+		data.reg_no = result.map(x => x.reg_no);
+		data.grade = result.map(x => x.grade);
+		
+		var hash = sha256(JSON.stringify(result));
+
+		var Coursekey = req.body.semester+":"+req.body.course+":"+req.body.section;
+
+		// console.log("Coursekey : " + Coursekey);
+		// console.log("data : " , data);
+
+		return blockchain.setGradesData(Coursekey, "Grades" , hash, data)
+	})
+	.then((result)=>{
+		
+		// console.log("result : ", result);
+		
+		if(result.status == true)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Grades successfully stored on blockchain" }));
+		}
+		else if(result.status == false)
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Some error occured while storing grades on blockchain" }));
+		}
+	})
+	.catch(function(result){
+		console.log("ERROR 2: " + result);
+	});
+})
+.put(verifyTeacher,  (req,res,next) => {	
+
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "/:teacherId/store_grades_on_blockchain" }));
+
+})
+.delete(verifyTeacher, (req,res,next) => {
+
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "/:teacherId/store_grades_on_blockchain" }));
+    
+});
 
 
 module.exports = teacherRouter;

@@ -157,7 +157,7 @@ deanRouter.route('/disapprove_assessment')
 deanRouter.route('/:semester/:course/:section/verify_all_assessments/specific_section')
 .get( (req, res, next) => 
 {
-	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = 'fall16' and c.name = 'CCN' and sec.name = 'A' and a.status = 'Approved'"; 
+	var query = "select a.id, mt.type_name, a.assesment_no from assesments as a join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid join marks_type as mt on mt.id = a.mt_id	where sem.name = ? and c.code = ? and sec.name = ? and a.status = 'Approved'"; 
 	var params = [ req.params.semester, req.params.course, req.params.section];
 
 	var primise = queryHelper.Execute(query, params);
@@ -277,7 +277,7 @@ deanRouter.route('/:semester/verify_all_assessments/specific_semester')
 deanRouter.route('/:semester/:course/verify_all_assessments/specific_course')
 .get(verifyDean, (req, res, next) => 
 {
-	var query = "select sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? and c.name = ? "; 
+	var query = "select sec.name as section, a.id, mt.type_name, a.assesment_no from assesments as a join marks_type as mt on mt.id = a.mt_id join section as sec on sec.id = a.sec_id join semester as sem on sem.id = sec.sid	join course as c on c.id = sec.cid where a.status = 'Approved' and sem.name = ? and c.code = ? "; 
 	var params = [ req.params.semester, req.params.course ];
 
 	var primise = queryHelper.Execute(query, params);
@@ -406,9 +406,6 @@ async function RevertMarks(_asses_id, _data, res)
 	// console.log("_asses_id : ", _asses_id);
 	// console.log("_data : ", _data);
 	// console.log("_data reg_no: ", _data.reg_no);
-	
-
-
 
 	var query = "update has_assesments set obtained_marks = ? where std_id = (select id from student where reg_no = ?) and aid = ? ";
 	var promiseArray = [];
@@ -439,8 +436,202 @@ async function RevertMarks(_asses_id, _data, res)
 		res.end(JSON.stringify({ status: false, message: err}));
 		
 	});
-
 }
+
+//    ##################################################     //
+
+deanRouter.route('/:semester/:course_code/:section/verify_grades/specific_section')
+.get((req, res, next) => 
+{
+	
+	var query = "select sec.id, c.name as course from section as sec join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid where sec.status = 'closed' and sem.name = ? and c.code = ?	and sec.name = ? "; 
+	var params = [ req.params.semester, req.params.course_code, req.params.section ];
+	
+	var primise = queryHelper.Execute(query, params);
+	primise.then(function(result){
+
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "section/courser/semester records not found" }));
+			return;
+		}
+		// console.log("result 112 : " , result);
+		
+		var Coursekey = req.params.semester+":"+result[0].course+":"+req.params.section;
+		
+		return recordVerification.VerifyGrades(result[0].id, Coursekey, 'Grades');
+		
+	})
+	.then((result) =>
+	{
+		if(result == "ok")
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Grades data is not tampered"}));
+		}
+		else
+		{	
+			// console.log("Result : ", result);
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Grades data is tampered", data : result}));
+		}
+	})
+	.catch(function(result){
+		console.log("ERROR 22: " + result);
+	});
+})
+.post(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
+})
+.put(verifyDean,  (req,res,next) => {	
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
+})
+.delete(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
+});
+
+// for a specific course
+
+deanRouter.route('/:semester/:course_code/verify_grades/specific_course')
+.get((req, res, next) => 
+{
+	
+	var query = "select sec.id, c.name as course, sec.name as section from section as sec join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid where sec.status = 'closed' and sem.name = ? and c.code = ?"; 
+	var params = [ req.params.semester, req.params.course_code ];
+	
+	var primise = queryHelper.Execute(query, params);
+	primise.then(function(result){
+
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "section/courser/semester records not found" }));
+			return;
+		}
+		// console.log("result 112 : " , result);
+		
+		// ades(req, _result, _type)
+
+		return recordVerification.VerifyAllGrades(req.params, result, 'course');
+		
+	})
+	.then((result) =>
+	{
+		if(result == "ok")
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Grades data is not tampered"}));
+		}
+		else
+		{	
+			// console.log("Result : ", result);
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Grades data is tampered", data : result}));
+		}
+	})
+	.catch(function(result){
+		console.log("ERROR 22: " + result);
+	});
+})
+.post(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
+})
+.put(verifyDean,  (req,res,next) => {	
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
+})
+.delete(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
+});
+
+
+
+// for a specific semester
+
+deanRouter.route('/:semester/verify_grades/specific_semester')
+.get((req, res, next) => 
+{
+	
+	var query = "select sec.id, c.name as course, sec.name as section from section as sec join course as c on c.id = sec.cid join semester as sem on sem.id = sec.sid where sec.status = 'closed' and sem.name = ?"; 
+	var params = [ req.params.semester];
+	
+	var primise = queryHelper.Execute(query, params);
+	primise.then(function(result){
+
+		if(result.length == 0)
+		{
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "section/courser/semester records not found" }));
+			return;
+		}
+		// console.log("result 112 : " , result);
+		
+		// ades(req, _result, _type)
+
+		return recordVerification.VerifyAllGrades(req.params, result, 'semester');
+		
+	})
+	.then((result) =>
+	{
+		if(result == "ok")
+		{
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: true, message: "Grades data is not tampered"}));
+		}
+		else
+		{	
+			// console.log("Result : ", result);
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');   
+			res.end(JSON.stringify({ status: false, message: "Grades data is tampered", data : result}));
+		}
+	})
+	.catch(function(result){
+		console.log("ERROR 22: " + result);
+	});
+})
+.post(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "POST operation not supported on /:teacherId/verify_assesment" }));
+})
+.put(verifyDean,  (req,res,next) => {	
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "PUT operation not supported on /:teacherId/verify_assesment" }));
+})
+.delete(verifyDean, (req,res,next) => {
+	res.statusCode = 403;
+	res.setHeader('Content-Type', 'application/json');   
+	res.end(JSON.stringify({ status: false, message: "DELETE operation not supported on /:teacherId/verify_assesment" }));
+});
+
+
+
+
+
+
+
+
+
+
 
 
 
