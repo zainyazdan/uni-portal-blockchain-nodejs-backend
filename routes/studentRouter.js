@@ -220,7 +220,7 @@ studentRouter.route('/:studentId/:semester/:course/:section/announcements')
 	// 	"course": "CCN",
 	// 	"section": "A"
 	// }
-	var query = "select a.announcement, a.date, a.time from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join announcements as a on a.sec_id=sec.id where s.reg_no = ? and sem.name=? and c.name = ? and sec.name = ?";
+	var query = "select a.announcement, a.date, a.time from student as s join user as u on u.id=s.uid join enrolled_in as ei on ei.std_id=s.id join section as sec on sec.id=ei.sec_id join semester as sem on sem.id=sec.sid join course as c on c.id = sec.cid join announcements as a on a.sec_id=sec.id where s.reg_no = ? and sem.name=? and c.code = ? and sec.name = ?";
 	var params = [ req.params.studentId ,req.params.semester ,req.params.course ,req.params.section];
 
 	var primise = queryHelper.Execute(query,params);	
@@ -327,7 +327,7 @@ studentRouter.route('/:studentId/:semester/courses')
 studentRouter.route('/:studentId/:semester/:course/:section/gradebook')
 .get(verifyStudent, (req,res,next) => {
 
-	var query = "select mt.type_name,a.date,a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id where sem.name = ?	and c.name = ? and sec.name = ? and std.reg_no = ? ORDER BY mt.type_name"; 
+	var query = "select mt.type_name,a.date,a.time, a.total_marks, ha.obtained_marks from student as std join has_assesments as ha on std.id = ha.std_id join assesments as a on a.id = ha.aid	join section as sec on sec.id = a.sec_id join course as c on c.id = sec.cid	join semester as sem on sem.id = sec.sid join user as u on u.id = std.uid join marks_type as mt on mt.id = a.mt_id join course_outline as co on co.mt_id = mt.id where sem.name = ?	and c.code = ? and sec.name = ? and std.reg_no = ? ORDER BY mt.type_name"; 
 	
 	var params = [ req.params.semester, req.params.course, req.params.section, req.params.studentId];
 

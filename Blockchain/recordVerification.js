@@ -27,7 +27,7 @@ async function VerifyAllAssessments(req, _result, _type)
             // var key = req.body.semester+":"+req.body.course+":"+req.body.section+":"+_result[i].type_name+"#"+_result[i].assesment_no; 
 			// KeysArray[i] = key;
 
-			CourseKeysArray[i] = req.semester+":"+req.course+":"+req.section;
+			CourseKeysArray[i] = req.semester+":"+_result[i].course+":"+req.section;
 			SectionKeysArray[i] = _result[i].type_name+":"+_result[i].assesment_no; 
 
             IdsArray[i] = _result[i].id;
@@ -59,7 +59,7 @@ async function VerifyAllAssessments(req, _result, _type)
             // var key = req.body.semester+":"+req.body.course+":"+_result[i].section+":"+_result[i].type_name+"#"+_result[i].assesment_no; 
 			// KeysArray[i] = key;
 			
-			CourseKeysArray[i] = req.semester+":"+req.course+":"+_result[i].section;
+			CourseKeysArray[i] = req.semester+":"+_result[i].course+":"+_result[i].section;
 			SectionKeysArray[i] = _result[i].type_name+":"+_result[i].assesment_no;
 
             IdsArray[i] = _result[i].id;
@@ -92,10 +92,16 @@ async function VerifyAllAssessments(req, _result, _type)
 			tempResult[0].marks_type = _result[i].type_name;
 			tempResult[0].assessment_no = _result[i].assesment_no;;
 
-            if(_result[i].course)
+
+			if(_type == "course")
+				tempResult[0].section = _result[i].section;
+
+			else if(_type == "semester")
+			{
                 tempResult[0].course = _result[i].course;
-            if(_result[i].section)
-                tempResult[0].section = _result[i].section;
+				tempResult[0].section = _result[i].section;
+			}
+
 
 			Results.push(tempResult);
 		}
